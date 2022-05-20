@@ -13,11 +13,23 @@ func TestAssign(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
-func testPrint(t *testing.T) {
+func TestPrint(t *testing.T) {
 	source := "noot!(6)"
 	expected := []Node{
 		PrintNode{
 			LiteralNode{"6", "int"},
+		},
+	}
+
+	testParsing(source, expected, t)
+}
+
+func TestPrintVar(t *testing.T) {
+	source := "a := 7; noot!(a)"
+	expected := []Node{
+		AssignmentNode{"a", "7", "int"},
+		PrintNode{
+			IdentifierNode{"a"},
 		},
 	}
 

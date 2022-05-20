@@ -51,6 +51,15 @@ func evalNode(runtime *Runtime, _node parser.Node, stderr chan string) (interfac
 		node := _node.(parser.LiteralNode)
 
 		return node.Value, true
+	case parser.IdentifierNode:
+		node := _node.(parser.IdentifierNode)
+
+		if runtime.vars[node.Value] != nil {
+			return runtime.vars[node.Value], true
+		} else {
+			stderr <- "RUNTIME ERROR: couldn't evaluate identifier node"
+			return nil, false
+		}
 	default:
 		stderr <- "RUNTIME ERROR: couldn't evaluate node"
 		return nil, false

@@ -29,6 +29,11 @@ type LiteralNode struct {
 	Type  string
 }
 
+// e.g. variable
+type IdentifierNode struct {
+	Value string
+}
+
 // Tokens to nodes
 func Parse(tokens []Token) ([]Node, error) {
 	nodes := []Node{}
@@ -81,31 +86,34 @@ func parseStatement(stmt []*Token, iter *Iterator[Token]) (Node, error) {
 		return parseLiteral(stmt)
 	}
 
-	return nil, errors.New("Token type not found")
+	return nil, errors.New("ERROR: Token type not found")
 }
 
 // Parse the case where a statement starts with and identifier
 func parseIdent(stmt []*Token) (Node, error) {
 	ident := stmt[0]
+	if len(stmt) == 1 {
+		return IdentifierNode{ident.Value}, nil
+	}
 	switch stmt[1].Type {
 	case Assign: // :=
 		if len(stmt) == 3 {
 			val := stmt[2]
 			return AssignmentNode{ident.Value, val.Value, val.Type}, nil
 		} else {
-			return nil, errors.New("Statements are not yet supported in assignments")
+			return nil, errors.New("ERROR: Statements are not yet supported in assignments")
 		}
 	}
 
-	return nil, errors.New("Unknown syntax after ident")
+	return nil, errors.New("ERROR: Unknown syntax after ident")
 }
 
 func parsePrint(stmt []*Token, iter *Iterator[Token]) (Node, error) {
 	if stmt[1].Type != OpenPar {
-		return nil, errors.New("Expected open parenthesis after noot!")
+		return nil, errors.New("ERROR: Expected open parenthesis after noot!")
 	}
 	if stmt[len(stmt)-1].Type != ClosedPar {
-		return nil, errors.New("Expected closed parenthesis following open parenthesis of noot!")
+		return nil, errors.New("ERROR: Expected closed parenthesis following open parenthesis of noot!")
 	}
 
 	innerStmt := stmt[2 : len(stmt)-1]
@@ -119,7 +127,7 @@ func parsePrint(stmt []*Token, iter *Iterator[Token]) (Node, error) {
 
 func parseLiteral(stmt []*Token) (Node, error) {
 	if len(stmt) != 1 {
-		return nil, errors.New("Invalid statement length for literal")
+		return nil, errors.New("ERROR: Invalid statement length for literal")
 	}
 
 	return LiteralNode{stmt[0].Value, stmt[0].Type}, nil
