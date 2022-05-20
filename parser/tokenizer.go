@@ -42,6 +42,8 @@ func Tokenize(source string) ([]Token, error) {
 		{Ident, regexp.MustCompile(`\A(\b\w+\b)`)},
 	}
 
+	source = strings.Trim(source, " ")
+
 	var tokens []Token
 	for source != "" {
 		token, err := nextToken(&source, &re)
