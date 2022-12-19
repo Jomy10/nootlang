@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -8,7 +9,7 @@ func TestAssignment(t *testing.T) {
 	source := "a := 5"
 	expected := []Token{
 		{Ident, "a"},
-		{Assign, ":="},
+		{Declare, ":="},
 		{Integer, "5"},
 	}
 
@@ -28,6 +29,22 @@ func TestNoot(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func testOperators(t *testing.T) {
+	source := "*+-/ 6 + 4"
+	fmt.Println("Testing", source)
+	expected := []Token{
+		{Star, "*"},
+		{Plus, "+"},
+		{Minus, "-"},
+		{Slash, "+"},
+		{Integer, "6"},
+		{Plus, "+"},
+		{Integer, "4"},
+	}
+
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 
@@ -36,7 +53,7 @@ func testTokenizing(source string, expected []Token, t *testing.T) {
 	}
 
 	if len(expected) != len(tokens) {
-		t.Fatalf("Expected and tokens have different sizes %#v | %#v\n", expected, tokens)
+		t.Fatalf("Expected and tokens have different sizes\n%#v\n%#v\n", expected, tokens)
 	}
 
 	for i, token := range expected {

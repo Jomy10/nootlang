@@ -4,35 +4,42 @@ import (
 	"testing"
 )
 
-func TestAssign(t *testing.T) {
+func TestDecl(t *testing.T) {
 	source := "a := 5"
 	expected := []Node{
-		AssignmentNode{"a", "5", "int"},
+		VarDeclNode{"a", IntegerLiteralNode{5}},
 	}
-
 	testParsing(source, expected, t)
 }
 
-func TestPrint(t *testing.T) {
-	source := "noot!(6)"
+func TestAddition(t *testing.T) {
+	source := "a + b"
 	expected := []Node{
-		PrintNode{
-			LiteralNode{"6", "int"},
+		BinaryExpressionNode{
+			VariableNode{"a"},
+			"+",
+			VariableNode{"b"},
 		},
 	}
-
 	testParsing(source, expected, t)
 }
 
-func TestPrintVar(t *testing.T) {
-	source := "a := 7; noot!(a)"
+func testAssignment(t *testing.T) {
+	source := "a := 0; a = 6 - 5"
 	expected := []Node{
-		AssignmentNode{"a", "7", "int"},
-		PrintNode{
-			IdentifierNode{"a"},
+		VarDeclNode{
+			"a",
+			IntegerLiteralNode{0},
+		},
+		VarAssignNode{
+			"a",
+			BinaryExpressionNode{
+				Left:     IntegerLiteralNode{6},
+				Operator: "-",
+				Right:    IntegerLiteralNode{5},
+			},
 		},
 	}
-
 	testParsing(source, expected, t)
 }
 
@@ -48,12 +55,12 @@ func testParsing(source string, expected []Node, t *testing.T) {
 	}
 
 	if len(nodes) != len(expected) {
-		t.Fatalf("Expected and nodes have different size %#v | %#v", expected, nodes)
+		t.Fatalf("Expected and nodes have different sizes\n%#v\n%#v\n", expected, nodes)
 	}
 
 	for i, node := range expected {
 		if node != nodes[i] {
-			t.Fatalf("Expected %#v, but go %#v\n", node, nodes[i])
+			t.Fatalf("Expected %#v\n But got %#v\n", node, nodes[i])
 		}
 	}
 }

@@ -2,43 +2,14 @@ package parser
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 )
 
-type Node interface{}
-
-// Type
-const (
-	Type_String  string = "string"
-	Type_Integer string = "int"
-)
-
-// An assignment node `a := 1`
-type AssignmentNode struct {
-	Name  string
-	Value string
-	Type  string
-}
-
-// noot!(value)
-type PrintNode struct {
-	Value Node
-}
-
-type LiteralNode struct {
-	Value string
-	Type  string
-}
-
-// e.g. variable
-type IdentifierNode struct {
-	Value string
-}
-
-// Tokens to nodes
+// Parse tokens into nodes
 func Parse(tokens []Token) ([]Node, error) {
 	nodes := []Node{}
-
-	iter := newIterator(tokens)
+	iter := newArrayIterator(tokens)
 
 	for iter.hasNext() {
 		node, err := parseNext(&iter)
@@ -51,84 +22,77 @@ func Parse(tokens []Token) ([]Node, error) {
 	return nodes, nil
 }
 
-// Parse the next statement
-func parseNext(iter *Iterator[Token]) (Node, error) {
-	stmt := getStmt(iter)
-	return parseStatement(stmt, iter)
-}
-
-// Read the tokens until the next EOS
-func getStmt(iter *Iterator[Token]) []*Token {
-	var stmt []*Token
-	for func() string {
-		if token := iter.peek(); token != nil {
-			return token.Type
-		} else {
-			return EOS
-		}
-	}() != EOS {
-		token, _ := iter.next()
-		stmt = append(stmt, token)
+func parseNext(tokenIter Iterator[Token]) (Node, error) {
+	token, hasNext := tokenIter.next()
+	if !hasNext {
+		return nil, errors.New("Unexpectedly found end of input")
 	}
-	_, _ = iter.next() // EOS
 
-	return stmt
-}
-
-// Usually separated by ; or \n, but ome need extra parsing, like for loops (with {})
-func parseStatement(stmt []*Token, iter *Iterator[Token]) (Node, error) {
-	switch stmt[0].Type {
+	switch token.Type {
 	case Ident:
-		return parseIdent(stmt)
-	case Print:
-		return parsePrint(stmt, iter)
+		return parseIdent(token, tokenIter)
 	case Integer:
-		return parseLiteral(stmt)
+		return parseIntegerLiteral(token)
 	}
 
-	return nil, errors.New("ERROR: Token type not found")
+	return nil, errors.New(fmt.Sprintf("Parser bug (parsing %s)", token.Value))
 }
 
-// Parse the case where a statement starts with and identifier
-func parseIdent(stmt []*Token) (Node, error) {
-	ident := stmt[0]
-	if len(stmt) == 1 {
-		return IdentifierNode{ident.Value}, nil
+// Parse all situations of an identifier followed by something
+func parseIdent(ident *Token, tokenIter Iterator[Token]) (Node, error) {
+	nextToken, hasNext := tokenIter.next()
+	if !hasNext {
+		return VariableNode{ident.Value}, nil
 	}
-	switch stmt[1].Type {
-	case Assign: // :=
-		if len(stmt) == 3 {
-			val := stmt[2]
-			return AssignmentNode{ident.Value, val.Value, val.Type}, nil
-		} else {
-			return nil, errors.New("ERROR: Statements are not yet supported in assignments")
+
+	switch nextToken.Type {
+	case Declare:
+		rhs, err := parseNext(tokenIter)
+		if err != nil {
+			return nil, err
 		}
+		return VarDeclNode{
+			ident.Value,
+			rhs,
+		}, nil
+	case Equal:
+		rhs, err := parseNext(tokenIter)
+		if err != nil {
+			return nil, err
+		}
+		return VarAssignNode{
+			ident.Value,
+			rhs,
+		}, nil
+	case Plus, Minus, Slash, Star:
+		return parseBinaryExpression(VariableNode{ident.Value}, Operator(nextToken.Value), tokenIter)
 	}
 
-	return nil, errors.New("ERROR: Unknown syntax after ident")
+	return nil, errors.New(fmt.Sprintf("Token %s is invalid at this location", nextToken.Value))
 }
 
-func parsePrint(stmt []*Token, iter *Iterator[Token]) (Node, error) {
-	if stmt[1].Type != OpenPar {
-		return nil, errors.New("ERROR: Expected open parenthesis after noot!")
+// Parse an integer literal
+func parseIntegerLiteral(token *Token) (Node, error) {
+	integer, err := strconv.ParseInt(token.Value, 10, 64)
+	if err != nil {
+		return nil, err
 	}
-	if stmt[len(stmt)-1].Type != ClosedPar {
-		return nil, errors.New("ERROR: Expected closed parenthesis following open parenthesis of noot!")
-	}
+	return IntegerLiteralNode{integer}, nil
+}
 
-	innerStmt := stmt[2 : len(stmt)-1]
-	innerNode, err := parseStatement(innerStmt, iter)
+// Parse a binary expression
+// - `lhs`: The left side of the expression
+// - `operator`: The operator of the expression
+// - `rhsIter`: The iterator of the tokens starting after the operator
+func parseBinaryExpression(lhs Node, operator Operator, rhsIter Iterator[Token]) (Node, error) {
+	rhs, err := parseNext(rhsIter)
 	if err != nil {
 		return nil, err
 	}
 
-	return PrintNode{innerNode}, nil
-}
-
-func parseLiteral(stmt []*Token) (Node, error) {
-	if len(stmt) != 1 {
-		return nil, errors.New("ERROR: Invalid statement length for literal")
-	}
-
-	return LiteralNode{stmt[0].Value, stmt[0].Type}, nil
+	return BinaryExpressionNode{
+		lhs,
+		operator,
+		rhs,
+	}, nil
 }

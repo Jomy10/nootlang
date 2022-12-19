@@ -7,35 +7,60 @@ import (
 	"strings"
 )
 
+// Token Type
+type TT = int
+
 // Tokens
 const (
-	Ident     string = "ident"
-	Assign    string = ":="
-	Equal     string = "="
-	Integer   string = "int"
-	Print     string = "print"
-	EOS       string = "eos" // \n or ;
-	OpenPar   string = "opar"
-	ClosedPar string = "cpar"
+	Ident TT = iota
+	// :=
+	Declare
+	// =
+	Equal
+	// \d
+	Integer
+	// noot!
+	Print
+	// End Of Statement
+	EOS // \n or ;
+	// +
+	Plus
+	// -
+	Minus
+	// /
+	Slash
+	// *
+	Star
+	// (
+	OpenPar
+	// )
+	ClosedPar
 )
 
+// A single token
 type Token struct {
-	Type  string
+	Type  TT
 	Value string
 }
 
+// Pair of token type and its regex definition
 type Pair struct {
-	Key string
-	Val *regexp.Regexp
+	Type  TT
+	Regex *regexp.Regexp
 }
 
 // Source code to tokens
 func Tokenize(source string) ([]Token, error) {
+	// Token regex definitions
 	re := []Pair{
-		{Assign, regexp.MustCompile(`\A(:=)`)},
+		{Declare, regexp.MustCompile(`\A(:=)`)},
+		{Plus, regexp.MustCompile(`\A\+`)},
+		{Minus, regexp.MustCompile(`\A-`)},
+		{Star, regexp.MustCompile(`\A\*`)},
+		{Slash, regexp.MustCompile(`\A/`)},
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
-		{EOS, regexp.MustCompile(`\A(\n)`)},
-		{EOS, regexp.MustCompile(`\A(;)`)},
+		{EOS, regexp.MustCompile(`\A(\n|;)`)},
+		// {EOS, regexp.MustCompile(`\A(;)`)},
 		{Print, regexp.MustCompile(`\A(noot!)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},
@@ -44,6 +69,7 @@ func Tokenize(source string) ([]Token, error) {
 
 	source = strings.Trim(source, " ")
 
+	// Collect tokens
 	var tokens []Token
 	for source != "" {
 		token, err := nextToken(&source, &re)
@@ -54,14 +80,34 @@ func Tokenize(source string) ([]Token, error) {
 	}
 
 	return tokens, nil
+	// var tokensFiltered []Token
+	// var prevToken Token
+	// for _, token := range tokens {
+	// 	switch token.Type {
+	// 	case EOS:
+	// 		if prevToken.Type != EOS {
+	// 			tokensFiltered = append(tokensFiltered, token)
+	// 		}
+	// 	default:
+	// 		tokensFiltered = append(tokensFiltered, token)
+	// 	}
+	// 	prevToken = token
+	// }
+
+	// return tokensFiltered, nil
 }
 
 // Get the next token
+// - `source`: the remaining part of the source that needs to be tokenized
+// - `reg`: the tokens and their regex definitions
 func nextToken(source *string, reg *[]Pair) (*Token, error) {
 	for _, pair := range *reg {
-		re := pair.Val
-		ty := pair.Key
+		re := pair.Regex
+		ty := pair.Type
 		if idx := re.FindStringIndex(*source); len(idx) != 0 {
+			if idx[1] == 0 {
+				continue
+			}
 			value := (*source)[idx[0]:idx[1]]
 			*source = strings.Trim((*source)[idx[1]:], " ")
 			return &Token{ty, value}, nil
