@@ -48,3 +48,7 @@ type VarAssignNode struct {
 type IntegerLiteralNode struct {
 	Value int64
 }
+
+type PrintStmtNode struct {
+	Inner Node
+}

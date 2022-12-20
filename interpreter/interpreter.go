@@ -1,13 +1,21 @@
 package interpreter
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jomy10/nootlang/parser"
+	"io"
 	"strconv"
+	"strings"
 )
 
 type Runtime struct {
+	// Variable names => values
 	vars map[string]interface{}
+}
+
+func NR() Runtime {
+	return newRuntime()
 }
 
 func newRuntime() Runtime {
@@ -16,83 +24,131 @@ func newRuntime() Runtime {
 	}
 }
 
-func Interpret(nodes []parser.Node, stdout chan string, stderr chan string, eop chan int) {
+func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
 	runtime := newRuntime()
 
 	for _, node := range nodes {
-		if !execNode(&runtime, node, stdout, stderr) {
-			eop <- 1
-			return // error occured
-		}
-	}
-
-	eop <- 0
-}
-
-func execNode(runtime *Runtime, _node parser.Node, stdout, stderr chan string) bool {
-	switch _node.(type) {
-	case parser.AssignmentNode:
-		node := _node.(parser.AssignmentNode)
-
-		// Check if variable with name does not exist
-		return execAssignment(runtime, node, stderr)
-	case parser.PrintNode:
-		node := _node.(parser.PrintNode)
-		return execPrint(runtime, node, stdout, stderr)
-	}
-
-	// Unreachable state
-	return false
-}
-
-func evalNode(runtime *Runtime, _node parser.Node, stderr chan string) (interface{}, bool) {
-	switch _node.(type) {
-	case parser.LiteralNode:
-		node := _node.(parser.LiteralNode)
-
-		return node.Value, true
-	case parser.IdentifierNode:
-		node := _node.(parser.IdentifierNode)
-
-		if runtime.vars[node.Value] != nil {
-			return runtime.vars[node.Value], true
-		} else {
-			stderr <- "RUNTIME ERROR: couldn't evaluate identifier node"
-			return nil, false
-		}
-	default:
-		stderr <- "RUNTIME ERROR: couldn't evaluate node"
-		return nil, false
-	}
-}
-
-func execAssignment(runtime *Runtime, node parser.AssignmentNode, stderr chan string) (noErr bool) {
-	if _, ok := runtime.vars[node.Name]; ok {
-		stderr <- fmt.Sprintf("RUNTIME ERROR: variable %s is already declared", node.Name)
-		return false
-	}
-
-	switch node.Type {
-	case parser.Integer:
-		i, err := strconv.Atoi(node.Value)
+		_, err := ExecNode(&runtime, node, stdout, stderr, stdin)
 		if err != nil {
-			stderr <- "INTERPRETER ERROR: String conversion failed"
-			return false
+			fmt.Printf("GOT ERROR %v\n", err)
+			return err
 		}
-		runtime.vars[node.Name] = i
-		return true
-	default:
-		stderr <- fmt.Sprintf("RUNTIMER ERROR: unknown type %s", node.Type)
-		return false
 	}
+
+	return nil // program executed without errors
 }
 
-func execPrint(runtime *Runtime, node parser.PrintNode, stdout, stderr chan string) bool {
-	evaled, ok := evalNode(runtime, node.Value, stderr)
-	if !ok {
-		return false
+// (return 1) Returns the value returned by the expression, or nil of nothing returned
+func ExecNode(runtime *Runtime, node parser.Node, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
+	// fmt.Printf("Node: %#v\n", node)
+	switch node.(type) {
+	case parser.VarDeclNode:
+		return nil, execVarDecl(runtime, node.(parser.VarDeclNode), stdout, stderr, stdin)
+	case parser.VarAssignNode:
+		return nil, execVarAssign(runtime, node.(parser.VarAssignNode), stdout, stderr, stdin)
+	case parser.PrintStmtNode:
+		return execPrintStmt(runtime, node.(parser.PrintStmtNode), stdout, stderr, stdin)
+	case parser.IntegerLiteralNode:
+		return node.(parser.IntegerLiteralNode).Value, nil
+	case parser.VariableNode:
+		return getVariable(runtime, node.(parser.VariableNode))
+	case parser.BinaryExpressionNode:
+		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode), stdout, stderr, stdin)
 	}
-	stdout <- fmt.Sprint(evaled)
+	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
+}
 
-	return true
+func execVarDecl(runtime *Runtime, node parser.VarDeclNode, stdout, stderr io.Writer, stdin io.Reader) error {
+	rhs, err := ExecNode(runtime, node.Rhs, stdout, stderr, stdin)
+	if err != nil {
+		return err
+	}
+	runtime.vars[node.VarName] = rhs
+	return nil
+}
+
+func execVarAssign(runtime *Runtime, node parser.VarAssignNode, stdout, stderr io.Writer, stdin io.Reader) error {
+	rhs, err := ExecNode(runtime, node.Rhs, stdout, stderr, stdin)
+	if err != nil {
+		return err
+	}
+	runtime.vars[node.VarName] = rhs
+	return nil
+}
+
+func execPrintStmt(runtime *Runtime, node parser.PrintStmtNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
+	inner, err := ExecNode(runtime, node.Inner, stdout, stderr, stdin)
+	if err != nil {
+		return nil, err
+	}
+	str := fmt.Sprintf("%v\n", inner)
+	stdout.Write([]byte(str))
+	return str, nil
+}
+
+func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error) {
+	val, ok := runtime.vars[node.Name]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
+	}
+	return val, nil
+}
+
+func execBinaryExpressionNode(runtime *Runtime, node parser.BinaryExpressionNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
+	left, err := ExecNode(runtime, node.Left, stdout, stderr, stdin)
+	if err != nil {
+		return nil, err
+	}
+	right, err := ExecNode(runtime, node.Right, stdout, stderr, stdin)
+	if err != nil {
+		return nil, err
+	}
+	return binaryExpressionResult(left, right, node.Operator)
+}
+
+func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (A, error) {
+	switch any(lhs).(type) {
+	case int64:
+		rhsInt, ok := any(rhs).(int64)
+		if !ok {
+			rhsStr := fmt.Sprintf("%v", rhs)
+			var err error
+			rhsInt, err = strconv.ParseInt(rhsStr, 10, 64)
+			if err != nil {
+				return toA[A](nil), err
+			}
+		}
+
+		switch op {
+		case parser.Op_Plus:
+			return toA[A](any(lhs).(int64) + rhsInt), nil
+		case parser.Op_Min:
+			return toA[A](any(lhs).(int64) - rhsInt), nil
+		case parser.Op_Mul:
+			return toA[A](any(lhs).(int64) * rhsInt), nil
+		case parser.Op_Div:
+			return toA[A](any(lhs).(int64) / rhsInt), nil
+		}
+	case string:
+		rhsStr := fmt.Sprintf("%v", rhs)
+		switch op {
+		case parser.Op_Plus:
+			var sb strings.Builder
+			sb.WriteString(any(lhs).(string))
+			sb.WriteString(rhsStr)
+			return toA[A](sb.String()), nil
+		case parser.Op_Min:
+			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+		case parser.Op_Mul:
+			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+		case parser.Op_Div:
+			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+		}
+	}
+
+	return toA[A](nil), errors.New(fmt.Sprintf("Cannot apply `%v` to the given operands", op))
+}
+
+func toA[A any](a any) A {
+	return a.(A)
 }

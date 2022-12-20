@@ -12,7 +12,7 @@ func TestDecl(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
-func TestAddition(t *testing.T) {
+func TestBinaryExpression(t *testing.T) {
 	source := "a + b"
 	expected := []Node{
 		BinaryExpressionNode{
@@ -39,6 +39,14 @@ func testAssignment(t *testing.T) {
 				Right:    IntegerLiteralNode{5},
 			},
 		},
+	}
+	testParsing(source, expected, t)
+}
+
+func testPrint(t *testing.T) {
+	source := "noot!(5)"
+	expected := []Node{
+		PrintStmtNode{IntegerLiteralNode{5}},
 	}
 	testParsing(source, expected, t)
 }

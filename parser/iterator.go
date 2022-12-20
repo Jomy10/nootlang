@@ -10,6 +10,8 @@ type Iterator[T any] interface {
 	// Returns the next element of the iterator without advancing it. Returns false
 	// as the second argument if there are no more elements in the iterator
 	peek() (*T, bool)
+	// See the previous eleemnt
+	prev() *T
 }
 
 // A simple iterator over an array of values T
@@ -48,6 +50,10 @@ func (iter *ArrayIterator[T]) peek() (*T, bool) {
 	return &iter.arr[iter.ptr], true
 }
 
+func (iter *ArrayIterator[T]) prev() *T {
+	return &iter.arr[iter.ptr-1]
+}
+
 type ArrayOfPointersIterator[T any] struct {
 	arr []*T
 	ptr int
@@ -76,4 +82,8 @@ func (iter *ArrayOfPointersIterator[T]) peek() (*T, bool) {
 		return nil, false
 	}
 	return iter.arr[iter.ptr], true
+}
+
+func (iter *ArrayOfPointersIterator[T]) prev() *T {
+	return iter.arr[iter.ptr-1]
 }

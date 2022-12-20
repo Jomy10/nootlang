@@ -54,6 +54,7 @@ func Tokenize(source string) ([]Token, error) {
 	// Token regex definitions
 	re := []Pair{
 		{Declare, regexp.MustCompile(`\A(:=)`)},
+		{Equal, regexp.MustCompile(`\A(=)`)},
 		{Plus, regexp.MustCompile(`\A\+`)},
 		{Minus, regexp.MustCompile(`\A-`)},
 		{Star, regexp.MustCompile(`\A\*`)},
@@ -67,7 +68,9 @@ func Tokenize(source string) ([]Token, error) {
 		{Ident, regexp.MustCompile(`\A(\b\w+\b)`)},
 	}
 
-	source = strings.Trim(source, " ")
+	source = strings.TrimSpace(source)
+	source = strings.Replace(source, "\t", "", -1)
+	// source = strings.Replace(source, "\n", "", -1)
 
 	// Collect tokens
 	var tokens []Token
@@ -114,5 +117,5 @@ func nextToken(source *string, reg *[]Pair) (*Token, error) {
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("Couldn't find token for %s", *source))
+	return nil, errors.New(fmt.Sprintf("Couldn't find token for `%s`", *source))
 }
