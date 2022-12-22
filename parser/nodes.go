@@ -49,11 +49,7 @@ type IntegerLiteralNode struct {
 	Value int64
 }
 
-type PrintStmtNode struct {
-	Inner Node
-}
-
 type FunctionCallExprNode struct {
 	FuncName  string
-	arguments []Node
+	Arguments []Node
 }

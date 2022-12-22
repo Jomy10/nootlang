@@ -2,14 +2,14 @@ package main
 
 import (
 	// "bytes"
-	"fmt"
+	// "fmt"
 	"github.com/jomy10/nootlang/interpreter"
 	"github.com/jomy10/nootlang/parser"
 	"os"
 )
 
 func main() {
-	tokens, err := parser.Tokenize("myVar := 5\n myVar = myVar + 6 * 2")
+	tokens, err := parser.Tokenize("myVar := 5\n myVar = myVar + 6 * 2\n noot!(myVar)")
 	if err != nil {
 		panic(err)
 	}
@@ -18,7 +18,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Tree: %#v\n", nodes)
+	// fmt.Printf("Tree: %#v\n", nodes)
 	interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin)
 	// runtime := interpreter.NR()
 	// buf := new(bytes.Buffer)

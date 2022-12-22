@@ -11,24 +11,52 @@ import (
 
 type Runtime struct {
 	// Variable names => values
-	vars map[string]interface{}
+	vars           map[string]interface{}
+	funcs          map[string]func([]interface{}) (interface{}, error)
+	stdout, stderr io.Writer
+	stdin          io.Reader
 }
 
-func NR() Runtime {
-	return newRuntime()
-}
-
-func newRuntime() Runtime {
+func NewRuntime(stdout, stderr io.Writer, stdin io.Reader) Runtime {
 	return Runtime{
-		vars: make(map[string]interface{}),
+		vars:   make(map[string]interface{}),
+		funcs:  make(map[string]func([]interface{}) (interface{}, error)),
+		stdout: stdout,
+		stderr: stderr,
+		stdin:  stdin,
+	}
+}
+
+func (runtime *Runtime) LoadStandardLibrary() {
+	runtime.funcs["noot!"] = func(args []interface{}) (interface{}, error) {
+		if len(args) == 0 {
+			return nil, errors.New("`noot!` expects at least one argument")
+		}
+
+		var str string
+		for _, arg := range args {
+			switch arg.(type) {
+			case string:
+				str += arg.(string)
+			default:
+				str += fmt.Sprintf("%v", arg)
+			}
+		}
+
+		// noot! is like println
+		str += "\n"
+
+		runtime.stdout.Write([]byte(str))
+		return str, nil
 	}
 }
 
 func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
-	runtime := newRuntime()
+	runtime := NewRuntime(stdout, stderr, stdin)
+	runtime.LoadStandardLibrary()
 
 	for _, node := range nodes {
-		_, err := ExecNode(&runtime, node, stdout, stderr, stdin)
+		_, err := ExecNode(&runtime, node)
 		if err != nil {
 			fmt.Printf("GOT ERROR %v\n", err)
 			return err
@@ -39,27 +67,48 @@ func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) e
 }
 
 // (return 1) Returns the value returned by the expression, or nil of nothing returned
-func ExecNode(runtime *Runtime, node parser.Node, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
+func ExecNode(runtime *Runtime, node parser.Node) (interface{}, error) {
 	// fmt.Printf("Node: %#v\n", node)
 	switch node.(type) {
 	case parser.VarDeclNode:
-		return nil, execVarDecl(runtime, node.(parser.VarDeclNode), stdout, stderr, stdin)
+		return nil, execVarDecl(runtime, node.(parser.VarDeclNode))
 	case parser.VarAssignNode:
-		return nil, execVarAssign(runtime, node.(parser.VarAssignNode), stdout, stderr, stdin)
-	case parser.PrintStmtNode:
-		return execPrintStmt(runtime, node.(parser.PrintStmtNode), stdout, stderr, stdin)
+		return nil, execVarAssign(runtime, node.(parser.VarAssignNode))
+	// // case parser.PrintStmtNode:
+	// 	return execPrintStmt(runtime, node.(parser.PrintStmtNode), stdout, stderr, stdin)
+	case parser.FunctionCallExprNode:
+		return execFuncCall(runtime, node.(parser.FunctionCallExprNode))
 	case parser.IntegerLiteralNode:
 		return node.(parser.IntegerLiteralNode).Value, nil
 	case parser.VariableNode:
 		return getVariable(runtime, node.(parser.VariableNode))
 	case parser.BinaryExpressionNode:
-		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode), stdout, stderr, stdin)
+		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode))
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
 }
 
-func execVarDecl(runtime *Runtime, node parser.VarDeclNode, stdout, stderr io.Writer, stdin io.Reader) error {
-	rhs, err := ExecNode(runtime, node.Rhs, stdout, stderr, stdin)
+func execFuncCall(runtime *Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
+	function := runtime.funcs[node.FuncName]
+
+	if function == nil {
+		return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
+	}
+
+	args := []interface{}{}
+	for _, argNode := range node.Arguments {
+		val, err := ExecNode(runtime, argNode)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, val)
+	}
+
+	return function(args)
+}
+
+func execVarDecl(runtime *Runtime, node parser.VarDeclNode) error {
+	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
@@ -67,8 +116,8 @@ func execVarDecl(runtime *Runtime, node parser.VarDeclNode, stdout, stderr io.Wr
 	return nil
 }
 
-func execVarAssign(runtime *Runtime, node parser.VarAssignNode, stdout, stderr io.Writer, stdin io.Reader) error {
-	rhs, err := ExecNode(runtime, node.Rhs, stdout, stderr, stdin)
+func execVarAssign(runtime *Runtime, node parser.VarAssignNode) error {
+	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
@@ -76,15 +125,15 @@ func execVarAssign(runtime *Runtime, node parser.VarAssignNode, stdout, stderr i
 	return nil
 }
 
-func execPrintStmt(runtime *Runtime, node parser.PrintStmtNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
-	inner, err := ExecNode(runtime, node.Inner, stdout, stderr, stdin)
-	if err != nil {
-		return nil, err
-	}
-	str := fmt.Sprintf("%v\n", inner)
-	stdout.Write([]byte(str))
-	return str, nil
-}
+// func execPrintStmt(runtime *Runtime, node parser.PrintStmtNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
+// 	inner, err := ExecNode(runtime, node.Inner, stdout, stderr, stdin)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	str := fmt.Sprintf("%v\n", inner)
+// 	stdout.Write([]byte(str))
+// 	return str, nil
+// }
 
 func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error) {
 	val, ok := runtime.vars[node.Name]
@@ -94,12 +143,12 @@ func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error
 	return val, nil
 }
 
-func execBinaryExpressionNode(runtime *Runtime, node parser.BinaryExpressionNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
-	left, err := ExecNode(runtime, node.Left, stdout, stderr, stdin)
+func execBinaryExpressionNode(runtime *Runtime, node parser.BinaryExpressionNode) (interface{}, error) {
+	left, err := ExecNode(runtime, node.Left)
 	if err != nil {
 		return nil, err
 	}
-	right, err := ExecNode(runtime, node.Right, stdout, stderr, stdin)
+	right, err := ExecNode(runtime, node.Right)
 	if err != nil {
 		return nil, err
 	}

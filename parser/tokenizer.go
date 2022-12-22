@@ -20,7 +20,7 @@ const (
 	// \d
 	Integer
 	// noot!
-	Print
+	// Print
 	// End Of Statement
 	EOS // \n or ;
 	// +
@@ -64,11 +64,11 @@ func Tokenize(source string) ([]Token, error) {
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
 		{EOS, regexp.MustCompile(`\A(\n|;)`)},
 		// {EOS, regexp.MustCompile(`\A(;)`)},
-		{Print, regexp.MustCompile(`\A(noot!)`)},
+		// {Print, regexp.MustCompile(`\A(noot!)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},
 		{Comma, regexp.MustCompile(`\A(,)`)},
-		{Ident, regexp.MustCompile(`\A(\b\w+\b)`)},
+		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
 	}
 
 	source = strings.TrimSpace(source)
