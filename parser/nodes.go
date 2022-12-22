@@ -52,3 +52,8 @@ type IntegerLiteralNode struct {
 type PrintStmtNode struct {
 	Inner Node
 }
+
+type FunctionCallExprNode struct {
+	FuncName  string
+	arguments []Node
+}

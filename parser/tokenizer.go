@@ -35,6 +35,8 @@ const (
 	OpenPar
 	// )
 	ClosedPar
+	// ,
+	Comma
 )
 
 // A single token
@@ -65,6 +67,7 @@ func Tokenize(source string) ([]Token, error) {
 		{Print, regexp.MustCompile(`\A(noot!)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},
+		{Comma, regexp.MustCompile(`\A(,)`)},
 		{Ident, regexp.MustCompile(`\A(\b\w+\b)`)},
 	}
 
