@@ -4,56 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jomy10/nootlang/parser"
+	"github.com/jomy10/nootlang/runtime"
+	"github.com/jomy10/nootlang/stdlib"
 	"io"
 	"strconv"
 	"strings"
 )
 
-type Runtime struct {
-	// Variable names => values
-	vars           map[string]interface{}
-	funcs          map[string]func([]interface{}) (interface{}, error)
-	stdout, stderr io.Writer
-	stdin          io.Reader
-}
-
-func NewRuntime(stdout, stderr io.Writer, stdin io.Reader) Runtime {
-	return Runtime{
-		vars:   make(map[string]interface{}),
-		funcs:  make(map[string]func([]interface{}) (interface{}, error)),
-		stdout: stdout,
-		stderr: stderr,
-		stdin:  stdin,
-	}
-}
-
-func (runtime *Runtime) LoadStandardLibrary() {
-	runtime.funcs["noot!"] = func(args []interface{}) (interface{}, error) {
-		if len(args) == 0 {
-			return nil, errors.New("`noot!` expects at least one argument")
-		}
-
-		var str string
-		for _, arg := range args {
-			switch arg.(type) {
-			case string:
-				str += arg.(string)
-			default:
-				str += fmt.Sprintf("%v", arg)
-			}
-		}
-
-		// noot! is like println
-		str += "\n"
-
-		runtime.stdout.Write([]byte(str))
-		return str, nil
-	}
-}
+// func (runtime *Runtime) LoadStandardLibrary() {
+// 	runtime.Funcs["noot!"] = stdlib.nootLine
+// }
 
 func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
-	runtime := NewRuntime(stdout, stderr, stdin)
-	runtime.LoadStandardLibrary()
+	runtime := runtime.NewRuntime(stdout, stderr, stdin)
+	stdlib.Register(runtime)
 
 	for _, node := range nodes {
 		_, err := ExecNode(&runtime, node)
@@ -89,7 +53,7 @@ func ExecNode(runtime *Runtime, node parser.Node) (interface{}, error) {
 }
 
 func execFuncCall(runtime *Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
-	function := runtime.funcs[node.FuncName]
+	function := runtime.Funcs[node.FuncName]
 
 	if function == nil {
 		return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
@@ -104,24 +68,31 @@ func execFuncCall(runtime *Runtime, node parser.FunctionCallExprNode) (interface
 		args = append(args, val)
 	}
 
-	return function(args)
+	return function(runtime, args)
 }
 
 func execVarDecl(runtime *Runtime, node parser.VarDeclNode) error {
+	if _, exists := runtime.Vars[node.VarName]; exists {
+		return errors.New(fmt.Sprintf("Variable `%s` is already defined", node.VarName))
+	}
+
 	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
-	runtime.vars[node.VarName] = rhs
+	runtime.Vars[node.VarName] = rhs
 	return nil
 }
 
 func execVarAssign(runtime *Runtime, node parser.VarAssignNode) error {
+	if _, exists := runtime.Vars[node.VarName]; !exists {
+		return errors.New(fmt.Sprintf("Variable `%s` is not defined", node.VarName))
+	}
 	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
-	runtime.vars[node.VarName] = rhs
+	runtime.Vars[node.VarName] = rhs
 	return nil
 }
 
@@ -136,7 +107,7 @@ func execVarAssign(runtime *Runtime, node parser.VarAssignNode) error {
 // }
 
 func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error) {
-	val, ok := runtime.vars[node.Name]
+	val, ok := runtime.Vars[node.Name]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
 	}
