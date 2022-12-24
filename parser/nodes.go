@@ -49,7 +49,18 @@ type IntegerLiteralNode struct {
 	Value int64
 }
 
+// (identifier)(args...)
 type FunctionCallExprNode struct {
 	FuncName  string
 	Arguments []Node
+}
+
+type FunctionDeclNode struct {
+	FuncName      string
+	ArgumentNames []string
+	Body          []Node
+}
+
+type ReturnNode struct {
+	Expr Node
 }

@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -19,7 +18,7 @@ func TestAssignment(t *testing.T) {
 func TestNoot(t *testing.T) {
 	source := "noot!(6);"
 	expected := []Token{
-		{Print, "noot!"},
+		{Ident, "noot!"},
 		{OpenPar, "("},
 		{Integer, "6"},
 		{ClosedPar, ")"},
@@ -29,17 +28,35 @@ func TestNoot(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
-func testOperators(t *testing.T) {
+func TestOperators(t *testing.T) {
 	source := "*+-/ 6 + 4"
-	fmt.Println("Testing", source)
 	expected := []Token{
 		{Star, "*"},
 		{Plus, "+"},
 		{Minus, "-"},
-		{Slash, "+"},
+		{Slash, "/"},
 		{Integer, "6"},
 		{Plus, "+"},
 		{Integer, "4"},
+	}
+
+	testTokenizing(source, expected, t)
+}
+
+func TestFunction(t *testing.T) {
+	source := "def f(arg1, arg2) { return arg1 }"
+	expected := []Token{
+		{Def, "def"},
+		{Ident, "f"},
+		{OpenPar, "("},
+		{Ident, "arg1"},
+		{Comma, ","},
+		{Ident, "arg2"},
+		{ClosedPar, ")"},
+		{OpenCurlPar, "{"},
+		{Return, "return"},
+		{Ident, "arg1"},
+		{ClosedCurlPar, "}"},
 	}
 
 	testTokenizing(source, expected, t)

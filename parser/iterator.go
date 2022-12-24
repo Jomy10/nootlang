@@ -25,6 +25,8 @@ type Iterator[T any] interface {
 	consume(n int) bool
 	// Returns the amount of elements left in this iterator
 	len() int
+	// Collect the itetor's slice (as owned values)
+	collect() []T
 }
 
 // A simple iterator over an array of values T
@@ -93,6 +95,10 @@ func (iter *ArrayIterator[T]) consume(n int) bool {
 	return !(iter.ptr > len(iter.arr))
 }
 
+func (iter *ArrayIterator[T]) collect() []T {
+	return iter.arr
+}
+
 type ArrayOfPointersIterator[T any] struct {
 	arr []*T
 	ptr int
@@ -151,4 +157,12 @@ func (iter *ArrayOfPointersIterator[T]) consume(n int) bool {
 
 func (iter *ArrayOfPointersIterator[T]) len() int {
 	return len(iter.arr)
+}
+
+func (iter *ArrayOfPointersIterator[T]) collect() []T {
+	var new []T = make([]T, len(iter.arr))
+	for _, elem := range iter.arr {
+		new = append(new, *elem)
+	}
+	return new
 }

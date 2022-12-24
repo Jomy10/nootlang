@@ -6,6 +6,7 @@ import (
 	"github.com/jomy10/nootlang/runtime"
 )
 
+// Register (import) the standard library in a runtime
 func Register(runtime *runtime.Runtime) {
 	runtime.Funcs["noot!"] = nootLine
 }

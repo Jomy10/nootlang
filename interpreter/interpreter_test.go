@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/jomy10/nootlang/parser"
+	"github.com/jomy10/nootlang/runtime"
+	"github.com/jomy10/nootlang/stdlib"
 	"os"
 	"testing"
 )
@@ -20,16 +22,56 @@ func nodes(source string, t *testing.T) []parser.Node {
 	return nodes
 }
 
-func TestPrintString(t *testing.T) {
+func TestPrint(t *testing.T) {
 	nodes := nodes("noot!(5)", t)
-	runtime := newRuntime()
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
-	ExecNode(&runtime, nodes[0], bufStd, bufErr, os.Stdin)
+	runtime := runtime.NewRuntime(bufStd, bufErr, os.Stdin)
+	stdlib.Register(&runtime)
+	n, err := ExecNode(&runtime, nodes[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != "5\n" {
+		t.Fatal()
+	}
+
 	if bufStd.String() != "5\n" {
 		t.Fatal(fmt.Sprintf("got %s", bufStd.String()))
 	}
 	if bufErr.Len() > 0 {
 		t.Fatal(fmt.Sprintf("Got stderr %s", bufErr.String()))
+	}
+}
+
+func TestFunction(t *testing.T) {
+	nodes := nodes("def fn(arg) { noot!(arg); }; fn(56)", t)
+
+	bufStd := new(bytes.Buffer)
+	bufErr := new(bytes.Buffer)
+
+	Interpret(nodes, bufStd, bufErr, os.Stdin)
+
+	if bufStd.String() != "56\n" {
+		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
+	}
+	if bufErr.Len() > 0 {
+		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
+	}
+}
+
+func TestMultiArgument(t *testing.T) {
+	nodes := nodes("def add(a, b) { return a + b }; noot!(add(1, 2))", t)
+
+	bufStd := new(bytes.Buffer)
+	bufErr := new(bytes.Buffer)
+
+	Interpret(nodes, bufStd, bufErr, os.Stdin)
+
+	if bufStd.String() != "3\n" {
+		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
+	}
+	if bufErr.Len() > 0 {
+		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
 	}
 }

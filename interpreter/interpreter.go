@@ -4,25 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jomy10/nootlang/parser"
-	"github.com/jomy10/nootlang/runtime"
+	runtime "github.com/jomy10/nootlang/runtime"
 	"github.com/jomy10/nootlang/stdlib"
 	"io"
 	"strconv"
 	"strings"
 )
 
-// func (runtime *Runtime) LoadStandardLibrary() {
-// 	runtime.Funcs["noot!"] = stdlib.nootLine
-// }
-
 func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
 	runtime := runtime.NewRuntime(stdout, stderr, stdin)
-	stdlib.Register(runtime)
+	stdlib.Register(&runtime)
 
 	for _, node := range nodes {
 		_, err := ExecNode(&runtime, node)
 		if err != nil {
-			fmt.Printf("GOT ERROR %v\n", err)
+			fmt.Printf("[Runtime error] %v\n", err)
 			return err
 		}
 	}
@@ -31,15 +27,13 @@ func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) e
 }
 
 // (return 1) Returns the value returned by the expression, or nil of nothing returned
-func ExecNode(runtime *Runtime, node parser.Node) (interface{}, error) {
+func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 	// fmt.Printf("Node: %#v\n", node)
 	switch node.(type) {
 	case parser.VarDeclNode:
 		return nil, execVarDecl(runtime, node.(parser.VarDeclNode))
 	case parser.VarAssignNode:
 		return nil, execVarAssign(runtime, node.(parser.VarAssignNode))
-	// // case parser.PrintStmtNode:
-	// 	return execPrintStmt(runtime, node.(parser.PrintStmtNode), stdout, stderr, stdin)
 	case parser.FunctionCallExprNode:
 		return execFuncCall(runtime, node.(parser.FunctionCallExprNode))
 	case parser.IntegerLiteralNode:
@@ -48,11 +42,44 @@ func ExecNode(runtime *Runtime, node parser.Node) (interface{}, error) {
 		return getVariable(runtime, node.(parser.VariableNode))
 	case parser.BinaryExpressionNode:
 		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode))
+	case parser.FunctionDeclNode:
+		return newFunction(runtime, node.(parser.FunctionDeclNode))
+	case parser.ReturnNode:
+		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
 }
 
-func execFuncCall(runtime *Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
+func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (interface{}, error) {
+	_runtime.Funcs[node.FuncName] = func(runtime *runtime.Runtime, args []interface{}) (interface{}, error) {
+		// Add variables
+		for i := 0; i < len(node.ArgumentNames); i++ {
+			if i < len(args) {
+				runtime.Vars[node.ArgumentNames[i]] = args[i]
+			} else {
+				runtime.Vars[node.ArgumentNames[i]] = nil
+			}
+		}
+
+		for _, node := range node.Body {
+			switch node.(type) {
+			case parser.ReturnNode:
+				return ExecNode(runtime, node)
+			default:
+				_, err := ExecNode(runtime, node)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		return nil, nil // Function did not return any value
+	}
+
+	return nil, nil
+}
+
+func execFuncCall(runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
 	function := runtime.Funcs[node.FuncName]
 
 	if function == nil {
@@ -71,7 +98,7 @@ func execFuncCall(runtime *Runtime, node parser.FunctionCallExprNode) (interface
 	return function(runtime, args)
 }
 
-func execVarDecl(runtime *Runtime, node parser.VarDeclNode) error {
+func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {
 	if _, exists := runtime.Vars[node.VarName]; exists {
 		return errors.New(fmt.Sprintf("Variable `%s` is already defined", node.VarName))
 	}
@@ -84,7 +111,7 @@ func execVarDecl(runtime *Runtime, node parser.VarDeclNode) error {
 	return nil
 }
 
-func execVarAssign(runtime *Runtime, node parser.VarAssignNode) error {
+func execVarAssign(runtime *runtime.Runtime, node parser.VarAssignNode) error {
 	if _, exists := runtime.Vars[node.VarName]; !exists {
 		return errors.New(fmt.Sprintf("Variable `%s` is not defined", node.VarName))
 	}
@@ -96,17 +123,7 @@ func execVarAssign(runtime *Runtime, node parser.VarAssignNode) error {
 	return nil
 }
 
-// func execPrintStmt(runtime *Runtime, node parser.PrintStmtNode, stdout, stderr io.Writer, stdin io.Reader) (interface{}, error) {
-// 	inner, err := ExecNode(runtime, node.Inner, stdout, stderr, stdin)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	str := fmt.Sprintf("%v\n", inner)
-// 	stdout.Write([]byte(str))
-// 	return str, nil
-// }
-
-func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error) {
+func getVariable(runtime *runtime.Runtime, node parser.VariableNode) (interface{}, error) {
 	val, ok := runtime.Vars[node.Name]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
@@ -114,7 +131,7 @@ func getVariable(runtime *Runtime, node parser.VariableNode) (interface{}, error
 	return val, nil
 }
 
-func execBinaryExpressionNode(runtime *Runtime, node parser.BinaryExpressionNode) (interface{}, error) {
+func execBinaryExpressionNode(runtime *runtime.Runtime, node parser.BinaryExpressionNode) (interface{}, error) {
 	left, err := ExecNode(runtime, node.Left)
 	if err != nil {
 		return nil, err
@@ -126,7 +143,7 @@ func execBinaryExpressionNode(runtime *Runtime, node parser.BinaryExpressionNode
 	return binaryExpressionResult(left, right, node.Operator)
 }
 
-func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (A, error) {
+func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (interface{}, error) {
 	switch any(lhs).(type) {
 	case int64:
 		rhsInt, ok := any(rhs).(int64)
@@ -135,19 +152,19 @@ func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (A, 
 			var err error
 			rhsInt, err = strconv.ParseInt(rhsStr, 10, 64)
 			if err != nil {
-				return toA[A](nil), err
+				return nil, errors.New(fmt.Sprintf("Cannot convert %s to integer in right hand side of binary expression (%v)", rhsStr, err))
 			}
 		}
 
 		switch op {
 		case parser.Op_Plus:
-			return toA[A](any(lhs).(int64) + rhsInt), nil
+			return any(lhs).(int64) + rhsInt, nil
 		case parser.Op_Min:
-			return toA[A](any(lhs).(int64) - rhsInt), nil
+			return any(lhs).(int64) - rhsInt, nil
 		case parser.Op_Mul:
-			return toA[A](any(lhs).(int64) * rhsInt), nil
+			return any(lhs).(int64) * rhsInt, nil
 		case parser.Op_Div:
-			return toA[A](any(lhs).(int64) / rhsInt), nil
+			return any(lhs).(int64) / rhsInt, nil
 		}
 	case string:
 		rhsStr := fmt.Sprintf("%v", rhs)
@@ -156,13 +173,13 @@ func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (A, 
 			var sb strings.Builder
 			sb.WriteString(any(lhs).(string))
 			sb.WriteString(rhsStr)
-			return toA[A](sb.String()), nil
+			return sb.String(), nil
 		case parser.Op_Min:
-			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+			return nil, errors.New("`-` cannot be applied to strings")
 		case parser.Op_Mul:
-			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+			return nil, errors.New("`-` cannot be applied to strings")
 		case parser.Op_Div:
-			return toA[A](nil), errors.New("`-` cannot be applied to strings")
+			return nil, errors.New("`-` cannot be applied to strings")
 		}
 	}
 

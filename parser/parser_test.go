@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -13,18 +14,21 @@ func TestDecl(t *testing.T) {
 }
 
 func TestBinaryExpression(t *testing.T) {
-	source := "a + b"
+	source := "c := a + b"
 	expected := []Node{
-		BinaryExpressionNode{
-			VariableNode{"a"},
-			"+",
-			VariableNode{"b"},
+		VarDeclNode{
+			"c",
+			BinaryExpressionNode{
+				VariableNode{"a"},
+				"+",
+				VariableNode{"b"},
+			},
 		},
 	}
 	testParsing(source, expected, t)
 }
 
-func testAssignment(t *testing.T) {
+func TestAssignmentParse(t *testing.T) {
 	source := "a := 0; a = 6 - 5"
 	expected := []Node{
 		VarDeclNode{
@@ -43,12 +47,122 @@ func testAssignment(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
-func testPrint(t *testing.T) {
+func TestPrint(t *testing.T) {
 	source := "noot!(5)"
 	expected := []Node{
-		PrintStmtNode{IntegerLiteralNode{5}},
+		FunctionCallExprNode{"noot!", []Node{IntegerLiteralNode{5}}},
 	}
 	testParsing(source, expected, t)
+}
+
+func TestFuncDecl(t *testing.T) {
+	source := "def test(arg) { argCpy := arg; return argCpy; }"
+	expected := []Node{
+		FunctionDeclNode{
+			"test",
+			[]string{"arg"},
+			[]Node{
+				VarDeclNode{"argCpy", VariableNode{"arg"}},
+				ReturnNode{VariableNode{"argCpy"}},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestFuncCallMultiArguments(t *testing.T) {
+	source := "call(a, b)"
+	expected := []Node{
+		FunctionCallExprNode{
+			"call",
+			[]Node{
+				VariableNode{"a"},
+				VariableNode{"b"},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestFuncDeclMultiArguments(t *testing.T) {
+	source := "def call(a, b) { return a + b; }"
+	expected := []Node{
+		FunctionDeclNode{
+			"call",
+			[]string{"a", "b"},
+			[]Node{
+				ReturnNode{
+					BinaryExpressionNode{
+						VariableNode{"a"},
+						Operator("+"),
+						VariableNode{"b"},
+					},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestParseList(t *testing.T) {
+	tokens, err := Tokenize("(a, b)")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	iter := newArrayIterator(tokens)
+	iter.consume(1)
+	list, err := collectList(&iter, ClosedPar)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := [][]*Token{
+		{&Token{Ident, "a"}},
+		{&Token{Ident, "b"}},
+	}
+
+	if len(list) != len(expected) {
+		t.Fatal("Unequal lengths")
+	}
+
+	for i := 0; i < len(expected); i++ {
+		if *expected[i][0] != *list[i][0] {
+			t.Fatalf("Unequal element %v an %v", *expected[i][0], *list[i][0])
+		}
+	}
+}
+
+func TestParseListNested(t *testing.T) {
+	tokens, err := Tokenize("(add(a, b))")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	iter := newArrayIterator(tokens)
+	iter.consume(1)
+	list, err := collectList(&iter, ClosedPar)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := [][]*Token{
+		{&Token{Ident, "add"}, &Token{OpenPar, "("}, &Token{Ident, "a"}, &Token{Comma, ","}, &Token{Ident, "b"}},
+	}
+
+	if len(list) != len(expected) {
+		t.Fatal("Unequal lengths")
+	}
+
+	for i := 0; i < len(expected); i++ {
+		if len(expected[i]) != len(list[i]) {
+			for j := 0; j < len(expected); j++ {
+				if *expected[i][j] != *expected[i][j] {
+					t.Fatalf("Unequal element %v an %v", *expected[i][j], *list[i][j])
+				}
+			}
+		}
+	}
 }
 
 func testParsing(source string, expected []Node, t *testing.T) {
@@ -67,7 +181,8 @@ func testParsing(source string, expected []Node, t *testing.T) {
 	}
 
 	for i, node := range expected {
-		if node != nodes[i] {
+		// if node != nodes[i] {
+		if !reflect.DeepEqual(node, nodes[i]) {
 			t.Fatalf("Expected %#v\n But got %#v\n", node, nodes[i])
 		}
 	}

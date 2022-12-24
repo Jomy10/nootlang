@@ -12,31 +12,23 @@ type TT = int
 
 // Tokens
 const (
-	Ident TT = iota
-	// :=
-	Declare
-	// =
-	Equal
-	// \d
-	Integer
-	// noot!
-	// Print
+	Ident   TT = iota
+	Declare    // :=
+	Equal      // =
+	Integer    // \d
 	// End Of Statement
-	EOS // \n or ;
-	// +
-	Plus
-	// -
-	Minus
-	// /
-	Slash
-	// *
-	Star
-	// (
-	OpenPar
-	// )
-	ClosedPar
-	// ,
-	Comma
+	EOS           // \n or ;
+	Plus          // +
+	Minus         // -
+	Slash         // /
+	Star          // *
+	OpenPar       // (
+	ClosedPar     // )
+	OpenCurlPar   // {
+	ClosedCurlPar // }
+	Comma         // ,
+	Def           // def
+	Return        // return
 )
 
 // A single token
@@ -63,11 +55,13 @@ func Tokenize(source string) ([]Token, error) {
 		{Slash, regexp.MustCompile(`\A/`)},
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
 		{EOS, regexp.MustCompile(`\A(\n|;)`)},
-		// {EOS, regexp.MustCompile(`\A(;)`)},
-		// {Print, regexp.MustCompile(`\A(noot!)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},
+		{OpenCurlPar, regexp.MustCompile(`\A{`)},
+		{ClosedCurlPar, regexp.MustCompile(`\A}`)},
 		{Comma, regexp.MustCompile(`\A(,)`)},
+		{Def, regexp.MustCompile(`\A(def)`)},
+		{Return, regexp.MustCompile(`\A(return)`)},
 		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
 	}
 
@@ -86,21 +80,6 @@ func Tokenize(source string) ([]Token, error) {
 	}
 
 	return tokens, nil
-	// var tokensFiltered []Token
-	// var prevToken Token
-	// for _, token := range tokens {
-	// 	switch token.Type {
-	// 	case EOS:
-	// 		if prevToken.Type != EOS {
-	// 			tokensFiltered = append(tokensFiltered, token)
-	// 		}
-	// 	default:
-	// 		tokensFiltered = append(tokensFiltered, token)
-	// 	}
-	// 	prevToken = token
-	// }
-
-	// return tokensFiltered, nil
 }
 
 // Get the next token
