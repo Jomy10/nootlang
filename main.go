@@ -1,13 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/jomy10/nootlang/interpreter"
 	"github.com/jomy10/nootlang/parser"
 	"os"
 )
 
 func main() {
-	tokens, err := parser.Tokenize("def add(a, b) { return a + b; }\n noot!(add(1, 2))")
+	tokens, err := parser.Tokenize("noot!(nil)")
 	if err != nil {
 		panic(err)
 	}
@@ -16,5 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin)
+	if err := interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin); err != nil {
+		panic(fmt.Sprintf("[Runtime error] %v\n", err))
+	}
 }

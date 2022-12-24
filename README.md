@@ -23,12 +23,17 @@ The interpreter is therefore focussed on readability rather than speed.
   - [x] integers
   - [ ] **strings**
   - [ ] **floats**
+  - [ ] **booleans**
   - [ ] structs
   - [ ] interfaces
 - **Functions**
   - [x] functions
   - [ ] functions as variables
   - [ ] **scopes**
+- [ ] modules
+- **Statements**
+  - **if/elsif/else**
+  - **match**
 
 ## Native Function Interface
 

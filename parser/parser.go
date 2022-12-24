@@ -139,6 +139,8 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		default:
 			return parseBinaryExpression(tokenIter)
 		}
+	case Nil:
+		return NilLiteralNode{}, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
@@ -166,11 +168,6 @@ func parseFunctionCallArguments(tokenIter Iterator[Token]) ([]Node, error) {
 
 	var args []Node
 	for _, arg := range argList {
-		// fmt.Printf("Parsing arg %v\n", arg)
-		fmt.Println("Parsing arg")
-		for _, a := range arg {
-			fmt.Printf("%v ", *a)
-		}
 		argIter := newArrayOfPointerIterator(arg)
 		expr, err := parseExpression(&argIter)
 		if err != nil {
@@ -276,7 +273,6 @@ func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error)
 	idx := 0
 	for true {
 		nextToken, hasNext := tokenIter.next()
-		fmt.Printf("> %v\n", nextToken)
 
 		if !hasNext {
 			if closingToken == EOS {

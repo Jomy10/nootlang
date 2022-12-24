@@ -18,7 +18,6 @@ func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) e
 	for _, node := range nodes {
 		_, err := ExecNode(&runtime, node)
 		if err != nil {
-			fmt.Printf("[Runtime error] %v\n", err)
 			return err
 		}
 	}
@@ -46,6 +45,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return newFunction(runtime, node.(parser.FunctionDeclNode))
 	case parser.ReturnNode:
 		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
+	case parser.NilLiteralNode:
+		return nil, nil
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
 }

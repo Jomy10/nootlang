@@ -29,6 +29,7 @@ const (
 	Comma         // ,
 	Def           // def
 	Return        // return
+	Nil           // nil
 )
 
 // A single token
@@ -62,6 +63,7 @@ func Tokenize(source string) ([]Token, error) {
 		{Comma, regexp.MustCompile(`\A(,)`)},
 		{Def, regexp.MustCompile(`\A(def)`)},
 		{Return, regexp.MustCompile(`\A(return)`)},
+		{Nil, regexp.MustCompile(`\A(nil)`)},
 		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
 	}
 

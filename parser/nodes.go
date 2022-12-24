@@ -64,3 +64,5 @@ type FunctionDeclNode struct {
 type ReturnNode struct {
 	Expr Node
 }
+
+type NilLiteralNode struct{}

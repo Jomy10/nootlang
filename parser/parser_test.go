@@ -165,6 +165,14 @@ func TestParseListNested(t *testing.T) {
 	}
 }
 
+func TestParseNil(t *testing.T) {
+	source := "a := nil"
+	expected := []Node{
+		VarDeclNode{"a", NilLiteralNode{}},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {
