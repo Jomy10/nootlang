@@ -141,6 +141,8 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		}
 	case Nil:
 		return NilLiteralNode{}, nil
+	case String:
+		return StringLiteralNode{firstToken.Value[1 : len(firstToken.Value)-1]}, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}

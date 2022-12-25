@@ -16,6 +16,7 @@ const (
 	Declare    // :=
 	Equal      // =
 	Integer    // \d
+	String     // ".* \" "
 	// End Of Statement
 	EOS           // \n or ;
 	Plus          // +
@@ -55,6 +56,7 @@ func Tokenize(source string) ([]Token, error) {
 		{Star, regexp.MustCompile(`\A\*`)},
 		{Slash, regexp.MustCompile(`\A/`)},
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
+		{String, regexp.MustCompile(`\A"[^"\\]*(\\.[^"\\]*)*"`)},
 		{EOS, regexp.MustCompile(`\A(\n|;)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},

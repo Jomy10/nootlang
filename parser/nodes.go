@@ -1,14 +1,5 @@
 package parser
 
-// type VarType int
-
-// VarType
-// const (
-// 	VT_String VarType = -1
-// 	VT_Int    VarType = VarType(Integer)
-// 	VT_Float          = -1
-// )
-
 type Operator string
 
 const (
@@ -66,3 +57,7 @@ type ReturnNode struct {
 }
 
 type NilLiteralNode struct{}
+
+type StringLiteralNode struct {
+	String string
+}

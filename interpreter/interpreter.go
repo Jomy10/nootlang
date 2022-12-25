@@ -38,7 +38,6 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 	case parser.IntegerLiteralNode:
 		return node.(parser.IntegerLiteralNode).Value, nil
 	case parser.VariableNode:
-		// return getVariable(runtime, node.(parser.VariableNode))
 		return runtime.GetVar(node.(parser.VariableNode).Name)
 	case parser.BinaryExpressionNode:
 		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode))
@@ -48,6 +47,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
 	case parser.NilLiteralNode:
 		return nil, nil
+	case parser.StringLiteralNode:
+		return node.(parser.StringLiteralNode).String, nil
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
 }
@@ -93,24 +94,34 @@ func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (inter
 	return nil, nil
 }
 
-func execFuncCall(runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
+func execFuncCall(_runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
 	// function := runtime.Funcs[node.FuncName]
-	function := runtime.GetFunc(node.FuncName)
+	function := _runtime.GetFunc(node.FuncName)
 
 	if function == nil {
-		return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
+		variable, err := _runtime.GetVar(node.FuncName)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
+		} else {
+			switch variable.(type) {
+			case func(*runtime.Runtime, []interface{}) (interface{}, error):
+				function = variable.(func(*runtime.Runtime, []interface{}) (interface{}, error))
+			default:
+				return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
+			}
+		}
 	}
 
 	args := []interface{}{}
 	for _, argNode := range node.Arguments {
-		val, err := ExecNode(runtime, argNode)
+		val, err := ExecNode(_runtime, argNode)
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, val)
 	}
 
-	return function(runtime, args)
+	return function(_runtime, args)
 }
 
 func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {

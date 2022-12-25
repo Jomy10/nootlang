@@ -69,6 +69,13 @@ func TestNil(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func TestStringToken(t *testing.T) {
+	source := "\"Hello \\\" World\""
+	expected := []Token{{String, source}}
+
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 

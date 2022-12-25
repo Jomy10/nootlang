@@ -173,6 +173,14 @@ func TestParseNil(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestParseString(t *testing.T) {
+	source := "a := \"Hello\""
+	expected := []Node{
+		VarDeclNode{"a", StringLiteralNode{"Hello"}},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {
