@@ -74,6 +74,7 @@ readability for newcomers.
 this is encouraged. Just make a new folder in this project for the faster interpreter
 so that they are separated. Here, readability can be compromised for speed (JIT
 compilation, caching, etc.)
+- Documentation is highly needed at the moment
 
 ## License
 

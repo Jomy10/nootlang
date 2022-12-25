@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jomy10/nootlang/interpreter"
 	"github.com/jomy10/nootlang/parser"
@@ -16,8 +17,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	if err := interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin); err != nil {
+	stdout := new(bytes.Buffer)
+	if err := interpreter.Interpret(nodes, stdout, os.Stderr, os.Stdin); err != nil {
 		panic(fmt.Sprintf("[Runtime error] %v\n", err))
 	}
+	fmt.Println(stdout.String())
 }
