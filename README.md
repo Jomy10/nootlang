@@ -24,16 +24,24 @@ The interpreter is therefore focussed on readability rather than speed.
   - [ ] **strings**
   - [ ] **floats**
   - [ ] **booleans**
+  - [ ] functions/anonymous functions
+  ```noot
+  def myFunc() {}
+  def myOtherFunc(fn) { fn() }
+  myOtherFunc(myFunc)
+  myOtherFunc(|| {})
+  ```
   - [ ] structs
   - [ ] interfaces
+  - [ ] tuples
+  - [ ] type assertion
 - **Functions**
   - [x] functions
-  - [ ] functions as variables
-  - [ ] **scopes**
+  - [x] **scopes**
 - [ ] modules
 - **Statements**
-  - **if/elsif/else**
-  - **match**
+  - [ ] **if/elsif/else**
+  - [ ] **match**
 
 ## Native Function Interface
 

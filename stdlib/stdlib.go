@@ -8,7 +8,7 @@ import (
 
 // Register (import) the standard library in a runtime
 func Register(runtime *runtime.Runtime) {
-	runtime.Funcs["noot!"] = nootLine
+	runtime.Funcs["GLOBAL"]["noot!"] = nootLine
 }
 
 // `noot!`

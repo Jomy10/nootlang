@@ -38,7 +38,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 	case parser.IntegerLiteralNode:
 		return node.(parser.IntegerLiteralNode).Value, nil
 	case parser.VariableNode:
-		return getVariable(runtime, node.(parser.VariableNode))
+		// return getVariable(runtime, node.(parser.VariableNode))
+		return runtime.GetVar(node.(parser.VariableNode).Name)
 	case parser.BinaryExpressionNode:
 		return execBinaryExpressionNode(runtime, node.(parser.BinaryExpressionNode))
 	case parser.FunctionDeclNode:
@@ -52,13 +53,23 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 }
 
 func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (interface{}, error) {
-	_runtime.Funcs[node.FuncName] = func(runtime *runtime.Runtime, args []interface{}) (interface{}, error) {
+	_runtime.SetFunc(node.FuncName, func(runtime *runtime.Runtime, args []interface{}) (interface{}, error) {
+		// Set scope
+		scopeStringBuilder := strings.Builder{}
+		scopeStringBuilder.WriteString(runtime.CurrentScope())
+		scopeStringBuilder.WriteString("$")
+		scopeStringBuilder.WriteString(node.FuncName)
+		scope := scopeStringBuilder.String()
+		runtime.AddScope(scope)
+
 		// Add variables
 		for i := 0; i < len(node.ArgumentNames); i++ {
 			if i < len(args) {
-				runtime.Vars[node.ArgumentNames[i]] = args[i]
+				// runtime.Vars[node.ArgumentNames[i]] = args[i]
+				runtime.SetVar(node.ArgumentNames[i], args[i])
 			} else {
-				runtime.Vars[node.ArgumentNames[i]] = nil
+				// runtime.Vars[node.ArgumentNames[i]] = nil
+				runtime.SetVar(node.ArgumentNames[i], nil)
 			}
 		}
 
@@ -74,14 +85,17 @@ func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (inter
 			}
 		}
 
+		// Pop scope
+		runtime.ExitScope()
 		return nil, nil // Function did not return any value
-	}
+	})
 
 	return nil, nil
 }
 
 func execFuncCall(runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
-	function := runtime.Funcs[node.FuncName]
+	// function := runtime.Funcs[node.FuncName]
+	function := runtime.GetFunc(node.FuncName)
 
 	if function == nil {
 		return nil, errors.New(fmt.Sprintf("Undeclared function `%s`\n", node.FuncName))
@@ -100,7 +114,8 @@ func execFuncCall(runtime *runtime.Runtime, node parser.FunctionCallExprNode) (i
 }
 
 func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {
-	if _, exists := runtime.Vars[node.VarName]; exists {
+	// if _, exists := runtime.Vars[node.VarName]; exists {
+	if runtime.VarExists(node.VarName) {
 		return errors.New(fmt.Sprintf("Variable `%s` is already defined", node.VarName))
 	}
 
@@ -108,29 +123,32 @@ func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {
 	if err != nil {
 		return err
 	}
-	runtime.Vars[node.VarName] = rhs
+	// runtime.Vars[node.VarName] = rhs
+	runtime.SetVar(node.VarName, rhs)
 	return nil
 }
 
 func execVarAssign(runtime *runtime.Runtime, node parser.VarAssignNode) error {
-	if _, exists := runtime.Vars[node.VarName]; !exists {
+	// if _, exists := runtime.Vars[node.VarName]; !exists {
+	if !runtime.VarExists(node.VarName) {
 		return errors.New(fmt.Sprintf("Variable `%s` is not defined", node.VarName))
 	}
 	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
-	runtime.Vars[node.VarName] = rhs
+	// runtime.Vars[node.VarName] = rhs
+	runtime.SetVar(node.VarName, rhs)
 	return nil
 }
 
-func getVariable(runtime *runtime.Runtime, node parser.VariableNode) (interface{}, error) {
-	val, ok := runtime.Vars[node.Name]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
-	}
-	return val, nil
-}
+// func getVariable(runtime *runtime.Runtime, node parser.VariableNode) (interface{}, error) {
+// 	// val, ok := runtime.Vars[node.Name]
+// 	if !runtime.VarExists(node.VarName) {
+// 		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
+// 	}
+// 	return val, nil
+// }
 
 func execBinaryExpressionNode(runtime *runtime.Runtime, node parser.BinaryExpressionNode) (interface{}, error) {
 	left, err := ExecNode(runtime, node.Left)

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	tokens, err := parser.Tokenize("noot!(nil)")
+	tokens, err := parser.Tokenize("v := 5; def f(arg) { noot!(v); noot!(arg); }; f(6); noot!(arg)")
 	if err != nil {
 		panic(err)
 	}
