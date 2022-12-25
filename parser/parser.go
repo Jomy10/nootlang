@@ -111,7 +111,6 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	case OpenPar:
 		return parseBinaryExpression(tokenIter)
 	case Integer:
-		// fallthrough
 		_, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome integer literal
 		if !hasSecond {
@@ -141,9 +140,20 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 			return parseBinaryExpression(tokenIter)
 		}
 	case Nil:
+		tokenIter.consume(1)
 		return NilLiteralNode{}, nil
 	case String:
-		return StringLiteralNode{parseStringLiteral(firstToken.Value)}, nil
+		secondToken, hasSecond := tokenIter.peekN(2)
+		if !hasSecond {
+			tokenIter.consume(1)
+			return StringLiteralNode{parseStringLiteral(firstToken.Value)}, nil
+		}
+
+		if secondToken.Type == Plus {
+			return parseBinaryExpression(tokenIter)
+		} else {
+			return nil, errors.New(fmt.Sprintf("Did not expect token %s afte string literal\n", secondToken.Value))
+		}
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
