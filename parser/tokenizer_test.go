@@ -76,6 +76,13 @@ func TestStringToken(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func TestFloatToken(t *testing.T) {
+	source := "1. 4.56"
+	expected := []Token{{Float, "1."}, {Float, "4.56"}}
+
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 

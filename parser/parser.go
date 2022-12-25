@@ -123,6 +123,19 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		} else {
 			return parseBinaryExpression(tokenIter)
 		}
+	case Float:
+		_, hasSecond := tokenIter.peekN(2)
+		// Handle lonesome float literal
+		if !hasSecond {
+			tokenIter.consume(1) // consume float
+			float, err := strconv.ParseFloat(firstToken.Value, 64)
+			if err != nil {
+				return nil, err
+			}
+			return FloatLiteralNode{float}, nil
+		} else {
+			return parseBinaryExpression(tokenIter)
+		}
 	case Ident:
 		secondToken, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome ident

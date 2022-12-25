@@ -40,6 +40,16 @@ type IntegerLiteralNode struct {
 	Value int64
 }
 
+type NilLiteralNode struct{}
+
+type StringLiteralNode struct {
+	String string
+}
+
+type FloatLiteralNode struct {
+	Value float64
+}
+
 // (identifier)(args...)
 type FunctionCallExprNode struct {
 	FuncName  string
@@ -54,10 +64,4 @@ type FunctionDeclNode struct {
 
 type ReturnNode struct {
 	Expr Node
-}
-
-type NilLiteralNode struct{}
-
-type StringLiteralNode struct {
-	String string
 }

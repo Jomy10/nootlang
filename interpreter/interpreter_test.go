@@ -50,7 +50,10 @@ func TestFunction(t *testing.T) {
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
 
-	Interpret(nodes, bufStd, bufErr, os.Stdin)
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if bufStd.String() != "56\n" {
 		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
@@ -66,10 +69,36 @@ func TestMultiArgument(t *testing.T) {
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
 
-	Interpret(nodes, bufStd, bufErr, os.Stdin)
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if bufStd.String() != "3\n" {
 		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
+	}
+	if bufErr.Len() > 0 {
+		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
+	}
+}
+
+func TestFloatMath(t *testing.T) {
+	// Because the first value is a float, the others will automatically be converted to floats
+	nodes := nodes("noot!(6.5 + 4 - 0.5)", t)
+
+	fmt.Printf("Nodes: %#v\n", nodes)
+
+	bufStd := new(bytes.Buffer)
+	bufErr := new(bytes.Buffer)
+
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if bufStd.String() != "10\n" {
+		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
 	}
 	if bufErr.Len() > 0 {
 		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))

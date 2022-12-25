@@ -15,6 +15,7 @@ const (
 	Ident   TT = iota
 	Declare    // :=
 	Equal      // =
+	Float      // \d.\d
 	Integer    // \d
 	String     // ".* \" "
 	// End Of Statement
@@ -55,6 +56,7 @@ func Tokenize(source string) ([]Token, error) {
 		{Minus, regexp.MustCompile(`\A-`)},
 		{Star, regexp.MustCompile(`\A\*`)},
 		{Slash, regexp.MustCompile(`\A/`)},
+		{Float, regexp.MustCompile(`\A\d+\.\d*`)},
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
 		{String, regexp.MustCompile(`\A"[^"\\]*(\\.[^"\\]*)*"`)},
 		{EOS, regexp.MustCompile(`\A(\n|;)`)},

@@ -181,6 +181,14 @@ func TestParseString(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestParseFloat(t *testing.T) {
+	source := "a := 6.5"
+	expected := []Node{
+		VarDeclNode{"a", FloatLiteralNode{6.5}},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {
