@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type Eos struct{}
@@ -142,7 +143,7 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	case Nil:
 		return NilLiteralNode{}, nil
 	case String:
-		return StringLiteralNode{firstToken.Value[1 : len(firstToken.Value)-1]}, nil
+		return StringLiteralNode{parseStringLiteral(firstToken.Value)}, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
@@ -305,4 +306,20 @@ func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error)
 	}
 
 	return nil, errors.New("Invalid list")
+}
+
+func parseStringLiteral(lit string) string {
+	// Remove quotes
+	substr := lit[1 : len(lit)-1]
+	substr = strings.Replace(substr, `\\`, `\`, -1)
+	substr = strings.Replace(substr, `\"`, `"`, -1)
+	substr = strings.Replace(substr, `\n`, "\n", -1)
+	substr = strings.Replace(substr, `\r`, "\r", -1)
+	substr = strings.Replace(substr, `\t`, "\t", -1)
+	substr = strings.Replace(substr, `\a`, "\a", -1)
+	substr = strings.Replace(substr, `\b`, "\b", -1)
+	substr = strings.Replace(substr, `\f`, "\f", -1)
+	substr = strings.Replace(substr, `\v`, "\v", -1)
+	// TODO: \x, \b, \u
+	return substr
 }

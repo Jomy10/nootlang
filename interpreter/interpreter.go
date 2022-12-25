@@ -153,14 +153,6 @@ func execVarAssign(runtime *runtime.Runtime, node parser.VarAssignNode) error {
 	return nil
 }
 
-// func getVariable(runtime *runtime.Runtime, node parser.VariableNode) (interface{}, error) {
-// 	// val, ok := runtime.Vars[node.Name]
-// 	if !runtime.VarExists(node.VarName) {
-// 		return nil, errors.New(fmt.Sprintf("Variable %s is not declared", node.Name))
-// 	}
-// 	return val, nil
-// }
-
 func execBinaryExpressionNode(runtime *runtime.Runtime, node parser.BinaryExpressionNode) (interface{}, error) {
 	left, err := ExecNode(runtime, node.Left)
 	if err != nil {
