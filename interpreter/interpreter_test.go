@@ -104,3 +104,43 @@ func TestFloatMath(t *testing.T) {
 		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
 	}
 }
+
+func TestBoolExpression(t *testing.T) {
+	nodes := nodes("noot!(5 != 6)", t)
+
+	bufStd := new(bytes.Buffer)
+	bufErr := new(bytes.Buffer)
+
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if bufStd.String() != "true\n" {
+		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
+	}
+	if bufErr.Len() > 0 {
+		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
+	}
+}
+
+func TestBoolExpression2(t *testing.T) {
+	nodes := nodes("noot!(true == false)", t)
+
+	bufStd := new(bytes.Buffer)
+	bufErr := new(bytes.Buffer)
+
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if bufStd.String() != "false\n" {
+		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
+	}
+	if bufErr.Len() > 0 {
+		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
+	}
+}

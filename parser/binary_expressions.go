@@ -19,7 +19,7 @@ func parseBinaryExpression(tokenIter Iterator[Token]) (Node, error) {
 			parLevel += 1
 		case ClosedPar:
 			parLevel -= 1
-		case Star, Slash, Plus, Minus:
+		case Star, Slash, Plus, Minus, DEqual, DNEqual, And, Or:
 			if parLevel == 0 {
 				lhsIter := newArrayOfPointerIterator(lhs)
 				exprNode, err := parseExpression(&lhsIter)
@@ -62,29 +62,38 @@ func __parseBinaryExpression(expr []interface{}) (Node, error) {
 		return nil, errors.New("Empty expression")
 	}
 
-	precedence := []TT{Minus, Plus, Slash, Star} // Operator precedence in reverse order
-	precedenceIdx := 0
+	// precedences := [][]TT{Minus, Plus, Slash, Star, DEqual, DNEqual, LT, GT, LTE, GTE, And, Or} // Operator precedence in reverse order
+	precedences := [][]TT{
+		{Or},
+		{And},
+		{DEqual, DNEqual, LT, GT, LTE, GTE},
+		{Plus, Minus}, // Also | and ^
+		{Star, Slash}, // Also %, <<, >>, & and &^
+	}
+	precedenceLevelIdx := 0
 
 	exprIdx := 0
 
-	for precedenceIdx != len(precedence) {
+	for precedenceLevelIdx != len(precedences) {
 		switch expr[exprIdx].(type) {
 		case *Token:
 			token := expr[exprIdx].(*Token)
-			if token.Type == precedence[precedenceIdx] {
-				lhs, err := __parseBinaryExpression(expr[:exprIdx])
-				if err != nil {
-					return nil, err
+			for precedenceIdx := 0; precedenceIdx < len(precedences[precedenceLevelIdx]); precedenceIdx++ {
+				if token.Type == precedences[precedenceLevelIdx][precedenceIdx] {
+					lhs, err := __parseBinaryExpression(expr[:exprIdx])
+					if err != nil {
+						return nil, err
+					}
+					rhs, err := __parseBinaryExpression(expr[exprIdx+1:])
+					if err != nil {
+						return nil, err
+					}
+					return BinaryExpressionNode{
+						lhs,
+						Operator(token.Value),
+						rhs,
+					}, nil
 				}
-				rhs, err := __parseBinaryExpression(expr[exprIdx+1:])
-				if err != nil {
-					return nil, err
-				}
-				return BinaryExpressionNode{
-					lhs,
-					Operator(token.Value),
-					rhs,
-				}, nil
 			}
 		}
 
@@ -92,7 +101,7 @@ func __parseBinaryExpression(expr []interface{}) (Node, error) {
 
 		if exprIdx == len(expr) {
 			exprIdx = 0
-			precedenceIdx += 1
+			precedenceLevelIdx += 1
 		}
 	}
 

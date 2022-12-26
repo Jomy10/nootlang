@@ -3,10 +3,18 @@ package parser
 type Operator string
 
 const (
-	Op_Plus Operator = "+"
-	Op_Min           = "-"
-	Op_Div           = "/"
-	Op_Mul           = "*"
+	Op_Plus       Operator = "+"
+	Op_Min                 = "-"
+	Op_Div                 = "/"
+	Op_Mul                 = "*"
+	Op_CompEqual           = "=="
+	Op_CompNEqual          = "!="
+	Op_LT                  = "<"
+	Op_GT                  = ">"
+	Op_LTE                 = "<="
+	Op_GTE                 = ">="
+	Op_Or                  = "||"
+	Op_And                 = "&&"
 )
 
 type Node interface{}
@@ -48,6 +56,10 @@ type StringLiteralNode struct {
 
 type FloatLiteralNode struct {
 	Value float64
+}
+
+type BoolLiteralNode struct {
+	Value bool
 }
 
 // (identifier)(args...)

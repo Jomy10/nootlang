@@ -18,6 +18,16 @@ const (
 	Float      // \d.\d
 	Integer    // \d
 	String     // ".* \" "
+	Bool       // true false
+	And        // &&
+	Or         // ||
+	Not        // !
+	DEqual     // ==
+	DNEqual    // !=
+	LT         // <
+	GT         // >
+	LTE        // <=
+	GTE        // >=
 	// End Of Statement
 	EOS           // \n or ;
 	Plus          // +
@@ -49,8 +59,14 @@ type Pair struct {
 // Source code to tokens
 func Tokenize(source string) ([]Token, error) {
 	// Token regex definitions
+	// The first in the list is the one that is matched first
 	re := []Pair{
 		{Declare, regexp.MustCompile(`\A(:=)`)},
+		{DEqual, regexp.MustCompile(`\A(==)`)},
+		{LTE, regexp.MustCompile(`\A(<=)`)},
+		{GTE, regexp.MustCompile(`\A(>=)`)},
+		{LT, regexp.MustCompile(`\A(<)`)},
+		{GT, regexp.MustCompile(`\A(>)`)},
 		{Equal, regexp.MustCompile(`\A(=)`)},
 		{Plus, regexp.MustCompile(`\A\+`)},
 		{Minus, regexp.MustCompile(`\A-`)},
@@ -59,6 +75,11 @@ func Tokenize(source string) ([]Token, error) {
 		{Float, regexp.MustCompile(`\A\d+\.\d*`)},
 		{Integer, regexp.MustCompile(`\A\b\d+\b`)},
 		{String, regexp.MustCompile(`\A"[^"\\]*(\\.[^"\\]*)*"`)},
+		{Bool, regexp.MustCompile(`\A(true|false)`)},
+		{DNEqual, regexp.MustCompile(`\A(!=)`)},
+		{And, regexp.MustCompile(`\A(&&)`)},
+		{Or, regexp.MustCompile(`\A(\|\|)`)},
+		{Not, regexp.MustCompile(`\A(!)`)},
 		{EOS, regexp.MustCompile(`\A(\n|;)`)},
 		{OpenPar, regexp.MustCompile(`\A\(`)},
 		{ClosedPar, regexp.MustCompile(`\A\)`)},

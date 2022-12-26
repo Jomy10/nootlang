@@ -189,6 +189,26 @@ func TestParseFloat(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+// TODO: new boolean operators
+func TestParseBool(t *testing.T) {
+	source := "a := true == false"
+	expected := []Node{
+		VarDeclNode{"a", BinaryExpressionNode{
+			BoolLiteralNode{true},
+			Operator("=="),
+			BoolLiteralNode{false},
+		}},
+	}
+	testParsing(source, expected, t)
+}
+
+// TODO:
+// func TestOperatorPrecedence(t *testing.T) {
+// 	source := "a := a + a * a - a == a != a || a && a"
+// 	expected := []Node{}
+// 	testParsing(source, expected, t)
+// }
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

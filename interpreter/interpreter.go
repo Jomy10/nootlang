@@ -43,6 +43,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return node.(parser.StringLiteralNode).String, nil
 	case parser.FloatLiteralNode:
 		return node.(parser.FloatLiteralNode).Value, nil
+	case parser.BoolLiteralNode:
+		return node.(parser.BoolLiteralNode).Value, nil
 	case parser.VariableNode:
 		return runtime.GetVar(node.(parser.VariableNode).Name)
 	case parser.BinaryExpressionNode:
@@ -167,42 +169,40 @@ func execBinaryExpressionNode(runtime *runtime.Runtime, node parser.BinaryExpres
 	return binaryExpressionResult(left, right, node.Operator)
 }
 
-func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (interface{}, error) {
-	switch any(lhs).(type) {
+func binaryExpressionResult(lhs interface{}, rhs interface{}, op parser.Operator) (interface{}, error) {
+	switch lhs.(type) {
 	case int64:
-		rhsInt, ok := any(rhs).(int64)
-		if !ok {
-			switch any(rhs).(type) {
-			case float64:
-				rhsInt = int64(any(rhs).(float64))
-			default:
-				rhsStr := fmt.Sprintf("%v", rhs)
-				var err error
-				rhsInt, err = strconv.ParseInt(rhsStr, 10, 64)
-				if err != nil {
-					return nil, errors.New(fmt.Sprintf("Cannot convert %s to integer in right hand side of binary expression (%v)", rhsStr, err))
-				}
+		switch rhs.(type) {
+		case int64:
+			return binaryOp(lhs.(int64), rhs.(int64), op)
+		case float64:
+			return binaryOp(float64(lhs.(int64)), rhs.(float64), op)
+		case string:
+			rhsInt, err := strconv.ParseInt(rhs.(string), 10, 64)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Cannot convert %s to integer in right hand side of binary expression (%v)", rhs, err))
 			}
+			return binaryOp(lhs.(int64), rhsInt, op)
+		default:
+			return nil, errors.New(fmt.Sprintf("Cannot apply binary operator to %v\n", rhs))
 		}
-
-		return binaryOp(any(lhs).(int64), rhsInt, op), nil
 	case float64:
-		rhsFloat, ok := any(rhs).(float64)
-		if !ok {
-			switch any(rhs).(type) {
-			case int64:
-				rhsFloat = float64(any(rhs).(int64))
-			default:
-				rhsStr := fmt.Sprintf("%v", rhs)
-				var err error
-				rhsFloat, err = strconv.ParseFloat(rhsStr, 64)
-				if err != nil {
-					return nil, errors.New(fmt.Sprintf("Cannot convert %s to float in right hand side of binary expression (%v)", rhsStr, err))
-				}
+		switch rhs.(type) {
+		case int64:
+			return binaryOp(lhs.(float64), float64(rhs.(int64)), op)
+		case float64:
+			return binaryOp(lhs.(float64), rhs.(float64), op)
+		case string:
+			rhsFloat, err := strconv.ParseFloat(rhs.(string), 64)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Cannot convert %s to floating point in right hand side of binary expression (%v)", rhs, err))
 			}
+			return binaryOp(lhs.(float64), rhsFloat, op)
+		default:
+			return nil, errors.New(fmt.Sprintf("Cannot apply binary operator to %v\n", rhs))
 		}
-
-		return binaryOp(any(lhs).(float64), rhsFloat, op), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Cannot apply binary operator to %v", rhs))
 	case string:
 		rhsStr := fmt.Sprintf("%v", rhs)
 		switch op {
@@ -218,24 +218,73 @@ func binaryExpressionResult[A any, B any](lhs A, rhs B, op parser.Operator) (int
 		case parser.Op_Div:
 			return nil, errors.New("`-` cannot be applied to strings")
 		}
+	case bool:
+		switch rhs.(type) {
+		case int64:
+			return binaryOpBool(lhs.(bool), rhs.(int64) == 0, op)
+		case float64:
+			return binaryOpBool(lhs.(bool), rhs.(float64) == 0, op)
+		case string:
+			rhsBool, err := strconv.ParseBool(rhs.(string))
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Cannot convert %s to boolean in right hand side of boolean expression (%v)", rhs, err))
+			}
+			return binaryOpBool(lhs.(bool), rhsBool, op)
+		case bool:
+			return binaryOpBool(lhs.(bool), rhs.(bool), op)
+		}
 	}
 
 	return nil, errors.New(fmt.Sprintf("Cannot apply `%v` to the given operands", op))
 }
 
 // Returns the result of a binary operation on an integer or float
-func binaryOp[T int64 | float64](lhs T, rhs T, op parser.Operator) T {
+func binaryOp[T int64 | float64](lhs T, rhs T, op parser.Operator) (interface{}, error) {
+	// fmt.Printf("%v %s %v\n", lhs, op, rhs)
 	switch op {
 	case parser.Op_Plus:
-		return lhs + rhs
+		return lhs + rhs, nil
 	case parser.Op_Min:
-		return lhs - rhs
+		return lhs - rhs, nil
 	case parser.Op_Mul:
-		return lhs * rhs
+		return lhs * rhs, nil
 	case parser.Op_Div:
-		return lhs / rhs
+		return lhs / rhs, nil
+	case parser.Op_CompEqual:
+		return lhs == rhs, nil
+	case parser.Op_CompNEqual:
+		return lhs != rhs, nil
+	case parser.Op_LT:
+		return lhs < rhs, nil
+	case parser.Op_GT:
+		return lhs > rhs, nil
+	case parser.Op_LTE:
+		return lhs <= rhs, nil
+	case parser.Op_GTE:
+		return lhs >= rhs, nil
+	case parser.Op_Or:
+		return nil, errors.New("Cannot apply `||` on integers and floats")
+	case parser.Op_And:
+		return nil, errors.New("Cannot apply `&&` on integers and floats")
+	default:
+		return 0, errors.New("Interpreter bug (unreachable)")
 	}
+}
 
-	fmt.Println("Interpreter bug (unreachable)")
-	return 0
+func binaryOpBool(lhs bool, rhs bool, op parser.Operator) (bool, error) {
+	switch op {
+	case parser.Op_Plus, parser.Op_Min, parser.Op_Mul, parser.Op_Div,
+		parser.Op_LT, parser.Op_GT, parser.Op_LTE, parser.Op_GTE:
+		return false, errors.New(fmt.Sprintf("Cannot apply `%s` to boolean", op))
+	case parser.Op_CompEqual:
+		return lhs == rhs, nil
+	case parser.Op_CompNEqual:
+		return lhs != rhs, nil
+	case parser.Op_Or:
+		return lhs || rhs, nil
+	case parser.Op_And:
+		return lhs && rhs, nil
+	default:
+		return false, errors.New("Interpreter bug (unreachable; unhandled operator in boolean binary operator)")
+	}
 }

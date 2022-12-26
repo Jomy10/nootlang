@@ -29,7 +29,7 @@ func TestNoot(t *testing.T) {
 }
 
 func TestOperators(t *testing.T) {
-	source := "*+-/ 6 + 4"
+	source := "*+-/ 6 + 4 == != || && !true > < >= <="
 	expected := []Token{
 		{Star, "*"},
 		{Plus, "+"},
@@ -38,6 +38,16 @@ func TestOperators(t *testing.T) {
 		{Integer, "6"},
 		{Plus, "+"},
 		{Integer, "4"},
+		{DEqual, "=="},
+		{DNEqual, "!="},
+		{Or, "||"},
+		{And, "&&"},
+		{Not, "!"},
+		{Bool, "true"},
+		{GT, ">"},
+		{LT, "<"},
+		{GTE, ">="},
+		{LTE, "<="},
 	}
 
 	testTokenizing(source, expected, t)
@@ -80,6 +90,12 @@ func TestFloatToken(t *testing.T) {
 	source := "1. 4.56"
 	expected := []Token{{Float, "1."}, {Float, "4.56"}}
 
+	testTokenizing(source, expected, t)
+}
+
+func TestBoolToken(t *testing.T) {
+	source := "true false"
+	expected := []Token{{Bool, "true"}, {Bool, "false"}}
 	testTokenizing(source, expected, t)
 }
 

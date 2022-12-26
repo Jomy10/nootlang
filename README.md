@@ -21,10 +21,11 @@ The interpreter is therefore focussed on readability rather than speed.
 
 - **Types**
   - [x] integers
-  - [ ] **strings**
-  - [ ] **floats**
+  - [x] **strings**
+  - [x] **floats**
   - [ ] **booleans**
-  - [ ] functions/anonymous functions
+  - [x] functions
+  - [ ] anonymous functions
   ```noot
   def myFunc() {}
   def myOtherFunc(fn) { fn() }

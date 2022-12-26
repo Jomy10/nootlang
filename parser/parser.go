@@ -110,6 +110,19 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	switch firstToken.Type {
 	case OpenPar:
 		return parseBinaryExpression(tokenIter)
+	case Bool:
+		_, hasSecond := tokenIter.peekN(2)
+		// handle lonesome boolean literal
+		if !hasSecond {
+			tokenIter.consume(1) // consume boolean
+			boolean, err := strconv.ParseBool(firstToken.Value)
+			if err != nil {
+				return nil, err
+			}
+			return BoolLiteralNode{boolean}, nil
+		} else {
+			return parseBinaryExpression(tokenIter)
+		}
 	case Integer:
 		_, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome integer literal
@@ -205,8 +218,11 @@ func parseFunctionCallArguments(tokenIter Iterator[Token]) ([]Node, error) {
 	return args, nil
 }
 
+// TODO: not operator (is not binary operator)
+
 func isBinaryOperator(token *Token) bool {
-	return token.Type == Star || token.Type == Slash || token.Type == Plus || token.Type == Minus
+	return token.Type == Star || token.Type == Slash || token.Type == Plus || token.Type == Minus ||
+		token.Type == DEqual || token.Type == DNEqual || token.Type == And || token.Type == Or
 }
 
 // tokenIter starts at the function's name
