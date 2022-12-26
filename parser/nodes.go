@@ -62,6 +62,10 @@ type BoolLiteralNode struct {
 	Value bool
 }
 
+type BinaryNotNode struct {
+	Expr Node
+}
+
 // (identifier)(args...)
 type FunctionCallExprNode struct {
 	FuncName  string

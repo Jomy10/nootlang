@@ -126,7 +126,7 @@ func TestBoolExpression(t *testing.T) {
 }
 
 func TestBoolExpression2(t *testing.T) {
-	nodes := nodes("noot!(true == false)", t)
+	nodes := nodes("noot!(!true)", t)
 
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)

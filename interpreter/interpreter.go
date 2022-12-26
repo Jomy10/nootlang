@@ -53,8 +53,23 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return newFunction(runtime, node.(parser.FunctionDeclNode))
 	case parser.ReturnNode:
 		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
+	case parser.BinaryNotNode:
+		return execBinaryNotExpressionNode(runtime, node.(parser.BinaryNotNode))
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
+}
+
+func execBinaryNotExpressionNode(runtime *runtime.Runtime, node parser.BinaryNotNode) (interface{}, error) {
+	val, err := ExecNode(runtime, node.Expr)
+	if err != nil {
+		return nil, err
+	}
+	switch val.(type) {
+	case bool:
+		return !(val.(bool)), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Cannot apply `!` to %v\n", val))
+	}
 }
 
 func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (interface{}, error) {

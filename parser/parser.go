@@ -180,6 +180,13 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		} else {
 			return nil, errors.New(fmt.Sprintf("Did not expect token %s afte string literal\n", secondToken.Value))
 		}
+	case Not:
+		tokenIter.consume(1)
+		node, err := parseExpression(tokenIter)
+		if err != nil {
+			return nil, err
+		}
+		return BinaryNotNode{node}, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
