@@ -77,6 +77,14 @@ func TestElse(t *testing.T) {
 	testWithOutput(`if 2.0 != 2.0 { noot!("wrong 1") } elsif !true { noot!("wrong 2") } else { noot!("correct") }`, "correct\n", t)
 }
 
+func TestWhile(t *testing.T) {
+	testWithOutput(`i := 3; while i != 0 { noot!(i); i = i - 1 }`, "3\n2\n1\n", t)
+}
+
+func TestArrayInit(t *testing.T) {
+	testWithOutput(`noot!([5, 6 + 2, 8])`, "[5 8 8]\n", t)
+}
+
 // Test interpreter and check its stdout
 func testWithOutput(source string, expectedStdout string, t *testing.T) {
 	nodes := nodes(source, t)

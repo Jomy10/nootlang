@@ -99,6 +99,8 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 	case If:
 		tokenIter.reverse(1)
 		return parseIf(tokenIter)
+	case While:
+		return parseWhile(tokenIter)
 	default:
 		return nil, errors.New(fmt.Sprintf("Node %#v is invalid at current position", firstToken))
 	}
@@ -190,14 +192,95 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 			return nil, err
 		}
 		return BinaryNotNode{node}, nil
+	case OpenSquarePar:
+		return parseArrayLiteral(tokenIter)
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
 }
 
-// Parse if or else if
+// tokenIter starts at [
+func parseArrayLiteral(tokenIter Iterator[Token]) (Node, error) {
+	tokenIter.consume(1) // consume [
+	squareBracketLevel := 1
+
+	var currentExpression []*Token
+	var expressions []Node
+
+	for {
+		nextToken, hasNext := tokenIter.next()
+		if !hasNext {
+			return nil, errors.New("Expected ] to close array initialization")
+		}
+
+		if nextToken.Type == OpenSquarePar {
+			squareBracketLevel += 1
+		} else if nextToken.Type == ClosedSquarePar {
+			squareBracketLevel -= 1
+		}
+
+		if nextToken.Type == Comma || squareBracketLevel == 0 {
+			exprIter := newArrayOfPointerIterator(currentExpression)
+			expr, err := parseExpression(&exprIter)
+			if err != nil {
+				return nil, err
+			}
+			expressions = append(expressions, expr)
+			currentExpression = currentExpression[:0]
+
+			if squareBracketLevel == 0 {
+				break
+			}
+		} else {
+			currentExpression = append(currentExpression, nextToken)
+		}
+	}
+
+	return ArrayLiteralNode{
+		expressions,
+	}, nil
+}
+
+// tokenIter starts at the condition of the while loop
+func parseWhile(tokenIter Iterator[Token]) (Node, error) {
+	// Collect the while loop's condition
+	var condition []*Token
+	for {
+		nextToken, hasNext := tokenIter.peek()
+
+		if !hasNext {
+			return nil, errors.New("Expected opening curly bracket after while condition")
+		}
+
+		if nextToken.Type == OpenCurlPar {
+			break
+		}
+
+		tokenIter.consume(1) // consume if not {
+		condition = append(condition, nextToken)
+	}
+
+	if len(condition) == 0 {
+		return nil, errors.New("While loop has empty condition")
+	}
+
+	conditionIter := newArrayOfPointerIterator(condition)
+	expr, err := parseExpression(&conditionIter)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := parseBody(tokenIter)
+
+	return WhileNode{
+		expr,
+		body,
+	}, nil
+}
+
+// Parse if or elsif (starting at if or elsi)
 func parseIf(tokenIter Iterator[Token]) (Node, error) {
-	ifToken, _ := tokenIter.next() // if
+	ifToken, _ := tokenIter.next() // if / elsif
 	var condition []*Token
 	if ifToken.Type == If || ifToken.Type == Elsif {
 		nextToken, hasNext := tokenIter.peek()
@@ -285,13 +368,6 @@ func parseFunctionCallArguments(tokenIter Iterator[Token]) ([]Node, error) {
 	}
 
 	return args, nil
-}
-
-// TODO: not operator (is not binary operator)
-
-func isBinaryOperator(token *Token) bool {
-	return token.Type == Star || token.Type == Slash || token.Type == Plus || token.Type == Minus ||
-		token.Type == DEqual || token.Type == DNEqual || token.Type == And || token.Type == Or
 }
 
 // tokenIter starts at the function's name

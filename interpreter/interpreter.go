@@ -45,6 +45,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return node.(parser.FloatLiteralNode).Value, nil
 	case parser.BoolLiteralNode:
 		return node.(parser.BoolLiteralNode).Value, nil
+	case parser.ArrayLiteralNode:
+		return execArrayLiteral(runtime, node.(parser.ArrayLiteralNode))
 	case parser.VariableNode:
 		return runtime.GetVar(node.(parser.VariableNode).Name)
 	case parser.BinaryExpressionNode:
@@ -59,8 +61,50 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return nil, execIf(runtime, node.(parser.IfNode))
 	case parser.ElseNode:
 		return nil, execElse(runtime, node.(parser.ElseNode))
+	case parser.WhileNode:
+		return nil, execWhile(runtime, node.(parser.WhileNode))
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
+}
+
+func execArrayLiteral(runtime *runtime.Runtime, node parser.ArrayLiteralNode) (interface{}, error) {
+	arr := make([]interface{}, len(node.Values))
+	for i, element := range node.Values {
+		arrElemVal, err := ExecNode(runtime, element)
+		if err != nil {
+			return nil, err
+		}
+		arr[i] = arrElemVal
+	}
+	return arr, nil
+}
+
+func execWhile(runtime *runtime.Runtime, node parser.WhileNode) error {
+whileLoop:
+	for {
+		condVal, err := ExecNode(runtime, node.Condition)
+		if err != nil {
+			return err
+		}
+
+		switch condVal.(type) {
+		case bool:
+			if !(condVal.(bool)) {
+				break whileLoop
+			}
+			for _, node := range node.Body {
+				_, err := ExecNode(runtime, node)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			return errors.New("Condition is not a boolean expression in while loop")
+		}
+
+	}
+
+	return nil
 }
 
 func execIf(runtime *runtime.Runtime, node parser.IfNode) error {

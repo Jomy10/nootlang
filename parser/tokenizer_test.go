@@ -109,6 +109,18 @@ func TestIfElseToken(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func TestLoopingTokens(t *testing.T) {
+	source := "while"
+	expected := []Token{{While, "while"}}
+	testTokenizing(source, expected, t)
+}
+
+func TestSquareBracket(t *testing.T) {
+	source := "[]"
+	expected := []Token{{OpenSquarePar, "["}, {ClosedSquarePar, "]"}}
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 

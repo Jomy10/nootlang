@@ -242,6 +242,36 @@ func TestIfParse(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestWhileLoop(t *testing.T) {
+	source := `while true { noot!("infinite") }`
+	expected := []Node{
+		WhileNode{
+			BoolLiteralNode{true},
+			[]Node{
+				FunctionCallExprNode{"noot!", []Node{StringLiteralNode{"infinite"}}},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestArrayLiteral(t *testing.T) {
+	source := `a := [5, 6 * 8, getVal()]`
+	expected := []Node{
+		VarDeclNode{
+			"a",
+			ArrayLiteralNode{
+				[]Node{
+					IntegerLiteralNode{5},
+					BinaryExpressionNode{IntegerLiteralNode{6}, Operator("*"), IntegerLiteralNode{8}},
+					FunctionCallExprNode{"getVal", nil},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

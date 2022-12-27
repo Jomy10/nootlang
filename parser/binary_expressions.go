@@ -14,12 +14,12 @@ func parseBinaryExpression(tokenIter Iterator[Token]) (Node, error) {
 	lhs := []*Token{}
 	nextToken, hasNext := tokenIter.next()
 	for hasNext {
-		switch nextToken.Type {
-		case OpenPar:
+		switch {
+		case nextToken.Type == OpenPar:
 			parLevel += 1
-		case ClosedPar:
+		case nextToken.Type == ClosedPar:
 			parLevel -= 1
-		case Star, Slash, Plus, Minus, DEqual, DNEqual, And, Or:
+		case isBinaryOperator(nextToken):
 			if parLevel == 0 {
 				lhsIter := newArrayOfPointerIterator(lhs)
 				exprNode, err := parseExpression(&lhsIter)
@@ -31,6 +31,7 @@ func parseBinaryExpression(tokenIter Iterator[Token]) (Node, error) {
 			} else {
 				lhs = append(lhs, nextToken)
 			}
+
 		default:
 			lhs = append(lhs, nextToken)
 		}
@@ -106,4 +107,11 @@ func __parseBinaryExpression(expr []interface{}) (Node, error) {
 	}
 
 	return nil, errors.New("Parser bug?")
+}
+
+func isBinaryOperator(token *Token) bool {
+	// return token.Type == Star || token.Type == Slash || token.Type == Plus || token.Type == Minus ||
+	// 	token.Type == DEqual || token.Type == DNEqual || token.Type == And || token.Type == Or ||
+	// 	token.Type == LT || token.Type == GT || token.Type == LTE || token.Type == GTE
+	return token.Type >= And && token.Type <= Star
 }

@@ -19,32 +19,39 @@ const (
 	Integer    // \d
 	String     // ".* \" "
 	Bool       // true false
-	And        // &&
-	Or         // ||
-	Not        // !
-	DEqual     // ==
-	DNEqual    // !=
-	LT         // <
-	GT         // >
-	LTE        // <=
-	GTE        // >=
+
+	// Binary operators
+	And     // &&
+	Or      // ||
+	DEqual  // ==
+	DNEqual // !=
+	LT      // <
+	GT      // >
+	LTE     // <=
+	GTE     // >=
+	Plus    // +
+	Minus   // -
+	Slash   // /
+	Star    // *
+
+	Not // !
+
 	// End Of Statement
-	EOS           // \n or ;
-	Plus          // +
-	Minus         // -
-	Slash         // /
-	Star          // *
-	OpenPar       // (
-	ClosedPar     // )
-	OpenCurlPar   // {
-	ClosedCurlPar // }
-	Comma         // ,
-	Def           // def
-	Return        // return
-	Nil           // nil
-	If            // if
-	Else          // else
-	Elsif         // Elsif
+	EOS             // \n or ;
+	OpenPar         // (
+	ClosedPar       // )
+	OpenCurlPar     // {
+	ClosedCurlPar   // }
+	OpenSquarePar   // [ // TODO
+	ClosedSquarePar // ] // TODO
+	Comma           // ,
+	Def             // def
+	Return          // return
+	Nil             // nil
+	If              // if
+	Else            // else
+	Elsif           // elsif
+	While           // while
 )
 
 // A single token
@@ -88,6 +95,8 @@ func Tokenize(source string) ([]Token, error) {
 		{ClosedPar, regexp.MustCompile(`\A\)`)},
 		{OpenCurlPar, regexp.MustCompile(`\A{`)},
 		{ClosedCurlPar, regexp.MustCompile(`\A}`)},
+		{OpenSquarePar, regexp.MustCompile(`\A\[`)},
+		{ClosedSquarePar, regexp.MustCompile(`\A\]`)},
 		{Comma, regexp.MustCompile(`\A(,)`)},
 		{Def, regexp.MustCompile(`\A(def)`)},
 		{Return, regexp.MustCompile(`\A(return)`)},
@@ -95,6 +104,7 @@ func Tokenize(source string) ([]Token, error) {
 		{If, regexp.MustCompile(`\A(if)`)},
 		{Else, regexp.MustCompile(`\A(else)`)},
 		{Elsif, regexp.MustCompile(`\A(elsif)`)},
+		{While, regexp.MustCompile(`\A(while)`)},
 		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
 	}
 

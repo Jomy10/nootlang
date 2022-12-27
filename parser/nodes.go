@@ -74,6 +74,12 @@ type BoolLiteralNode struct {
 	Value bool
 }
 
+// [(expr,)*]
+type ArrayLiteralNode struct {
+	Values []Node
+}
+
+// !(expr)
 type BinaryNotNode struct {
 	Expr Node
 }
@@ -92,4 +98,9 @@ type FunctionDeclNode struct {
 
 type ReturnNode struct {
 	Expr Node
+}
+
+type WhileNode struct {
+	Condition Node
+	Body      []Node
 }
