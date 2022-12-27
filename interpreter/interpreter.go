@@ -57,6 +57,10 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
 	case parser.BinaryNotNode:
 		return execBinaryNotExpressionNode(runtime, node.(parser.BinaryNotNode))
+	case parser.ArrayIndexNode:
+		return execArrayIndexNode(runtime, node.(parser.ArrayIndexNode))
+	case parser.ArrayIndexAssignmentNode:
+		return nil, execArrayIndexAssignmentNode(runtime, node.(parser.ArrayIndexAssignmentNode))
 	case parser.IfNode:
 		return nil, execIf(runtime, node.(parser.IfNode))
 	case parser.ElseNode:
@@ -65,6 +69,49 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return nil, execWhile(runtime, node.(parser.WhileNode))
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
+}
+
+func execArrayIndexAssignmentNode(runtime *runtime.Runtime, node parser.ArrayIndexAssignmentNode) error {
+	idx, err := ExecNode(runtime, node.Index)
+	if err != nil {
+		return err
+	}
+	val, err := ExecNode(runtime, node.Rhs)
+	if err != nil {
+		return err
+	}
+
+	switch idx.(type) {
+	case int64:
+		// ok
+		runtime.SetArrayIndex(node.Array.Name, idx.(int64), val)
+		return nil
+	default:
+		return errors.New("Only integers can be used for array indexing")
+	}
+}
+
+// Return the value
+func execArrayIndexNode(runtime *runtime.Runtime, node parser.ArrayIndexNode) (interface{}, error) {
+	array, err := ExecNode(runtime, node.Array)
+	if err != nil {
+		return nil, err
+	}
+	switch array.(type) {
+	case []interface{}:
+		idx, err := ExecNode(runtime, node.Index)
+		if err != nil {
+			return nil, err
+		}
+		switch idx.(type) {
+		case int64:
+			return array.([]interface{})[idx.(int64)], nil
+		default:
+			return nil, errors.New("Only integer values can be used to index an aray")
+		}
+	default:
+		return nil, errors.New("Cannot index non-array type")
+	}
 }
 
 func execArrayLiteral(runtime *runtime.Runtime, node parser.ArrayLiteralNode) (interface{}, error) {

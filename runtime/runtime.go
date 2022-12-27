@@ -52,6 +52,16 @@ func (runtime *Runtime) SetVar(varname string, varval interface{}) {
 	runtime.Vars[runtime.Scopes[len(runtime.Scopes)-1]][varname] = varval
 }
 
+func (runtime *Runtime) SetArrayIndex(varname string, index int64, varval interface{}) {
+	for i := len(runtime.Scopes) - 1; i >= 0; i-- {
+		scope := runtime.Scopes[i]
+		_, ok := runtime.Vars[scope][varname]
+		if ok {
+			runtime.Vars[scope][varname].([]interface{})[index] = varval
+		}
+	}
+}
+
 func (runtime *Runtime) VarExists(varname string) bool {
 	for i := len(runtime.Scopes) - 1; i >= 0; i-- {
 		_, exists := runtime.Vars[runtime.Scopes[i]][varname]

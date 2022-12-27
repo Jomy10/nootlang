@@ -272,6 +272,54 @@ func TestArrayLiteral(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestArrayInExpressionList(t *testing.T) {
+	source := "noot!([7, 8 + 9])"
+	expected := []Node{
+		FunctionCallExprNode{
+			"noot!",
+			[]Node{
+				ArrayLiteralNode{
+					[]Node{
+						IntegerLiteralNode{7},
+						BinaryExpressionNode{
+							IntegerLiteralNode{8},
+							Operator("+"),
+							IntegerLiteralNode{9},
+						},
+					},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestArrayIndex(t *testing.T) {
+	source := `b := a[6]`
+	expected := []Node{
+		VarDeclNode{
+			"b",
+			ArrayIndexNode{
+				VariableNode{"a"},
+				IntegerLiteralNode{6},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestArrayIndexAssignment(t *testing.T) {
+	source := "a[0] = 4"
+	expected := []Node{
+		ArrayIndexAssignmentNode{
+			VariableNode{"a"},
+			IntegerLiteralNode{0},
+			IntegerLiteralNode{4},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

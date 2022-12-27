@@ -85,6 +85,14 @@ func TestArrayInit(t *testing.T) {
 	testWithOutput(`noot!([5, 6 + 2, 8])`, "[5 8 8]\n", t)
 }
 
+func TestArrayIndex(t *testing.T) {
+	testWithOutput(`a := [5]; noot!(a[0])`, "5\n", t)
+}
+
+func TestArrayAssignment(t *testing.T) {
+	testWithOutput(`a := [5]; a[0] = 6; noot!(a[0])`, "6\n", t)
+}
+
 // Test interpreter and check its stdout
 func testWithOutput(source string, expectedStdout string, t *testing.T) {
 	nodes := nodes(source, t)

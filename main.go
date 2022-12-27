@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	tokens, err := parser.Tokenize(`a := [5, 6 + 2, 8]; noot!(a)`)
+	tokens, err := parser.Tokenize(`a := [5, 6 + 2, 8]; noot!(a); a[1] = 1; noot!(a)`)
 	if err != nil {
 		panic(err)
 	}

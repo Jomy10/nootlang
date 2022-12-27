@@ -55,6 +55,12 @@ type VarAssignNode struct {
 	Rhs     Node
 }
 
+type ArrayIndexAssignmentNode struct {
+	Array VariableNode
+	Index Node
+	Rhs   Node
+}
+
 // (int)
 type IntegerLiteralNode struct {
 	Value int64
@@ -94,6 +100,12 @@ type FunctionDeclNode struct {
 	FuncName      string
 	ArgumentNames []string
 	Body          []Node
+}
+
+// (ident)[(int)]
+type ArrayIndexNode struct {
+	Array Node
+	Index Node
 }
 
 type ReturnNode struct {

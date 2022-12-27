@@ -21,6 +21,7 @@ func Parse(tokens []Token) ([]Node, error) {
 
 	// Read until end of statement and parse (or end of input)
 	blockLevel := 0 // level of curly brackets
+	arrayLevel := 0 // level of square brackets
 	start := 0
 	i := 0
 	for true {
@@ -29,10 +30,14 @@ func Parse(tokens []Token) ([]Node, error) {
 				blockLevel += 1
 			} else if tokens[i].Type == ClosedCurlPar {
 				blockLevel -= 1
+			} else if tokens[i].Type == OpenSquarePar {
+				arrayLevel += 1
+			} else if tokens[i].Type == ClosedSquarePar {
+				arrayLevel -= 1
 			}
 		}
 
-		if i == len(tokens) || (tokens[i].Type == EOS && blockLevel == 0) {
+		if i == len(tokens) || (tokens[i].Type == EOS && blockLevel == 0 && arrayLevel == 0) {
 			currentStatement = tokens[start:i]
 			iter := newArrayIterator(currentStatement)
 			stmtNode, err := parseStatement(&iter)
@@ -85,8 +90,32 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 			} else {
 				return VarAssignNode{firstToken.Value, exprNode}, nil
 			}
+		case OpenSquarePar:
+			idxNode, err := parseArrayIndex(tokenIter)
+			if err != nil {
+				return nil, err
+			}
+
+			nextToken, hasNext := tokenIter.next()
+			if !hasNext {
+				return nil, errors.New("Cannot use array index expression as statement")
+			}
+
+			if nextToken.Type == Equal {
+				rhs, err := parseExpression(tokenIter)
+				if err != nil {
+					return nil, err
+				}
+				return ArrayIndexAssignmentNode{
+					VariableNode{"a"},
+					idxNode,
+					rhs,
+				}, nil
+			} else {
+				return nil, errors.New(fmt.Sprintf("Unexpected token %s", nextToken.Value))
+			}
 		default:
-			return nil, errors.New(fmt.Sprintf("Node %#v is invalid at current position", secondToken))
+			return nil, errors.New(fmt.Sprintf("%#v is invalid at current position", secondToken))
 		}
 	case Return:
 		expr, err := parseExpression(tokenIter)
@@ -158,15 +187,25 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		secondToken, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome ident
 		if !hasSecond {
-			tokenIter.consume(1) // consume integer/ident
+			tokenIter.consume(1) // consume ident
 			return VariableNode{firstToken.Value}, nil
 		}
 
 		switch secondToken.Type {
 		case OpenPar:
 			// function call
-			tokenIter.consume(1) // consume integer/ident
+			tokenIter.consume(1) // consume /ident
 			return parseFunctionCall(firstToken.Value, tokenIter)
+		case OpenSquarePar:
+			tokenIter.consume(1) // consume ident
+			innerIndexExpression, err := parseArrayIndex(tokenIter)
+			if err != nil {
+				return nil, err
+			}
+			return ArrayIndexNode{
+				VariableNode{firstToken.Value},
+				innerIndexExpression,
+			}, nil
 		default:
 			return parseBinaryExpression(tokenIter)
 		}
@@ -192,10 +231,37 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 			return nil, err
 		}
 		return BinaryNotNode{node}, nil
-	case OpenSquarePar:
+	case OpenSquarePar: // start of array initialization
 		return parseArrayLiteral(tokenIter)
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
+	}
+}
+
+// tokenIter is at [
+func parseArrayIndex(tokenIter Iterator[Token]) (Node, error) {
+	tokenIter.consume(1) // [
+	arrayLevel := 1
+
+	var expression []*Token
+	for {
+		nextToken, hasNext := tokenIter.next()
+		if !hasNext {
+			return nil, errors.New("Expected ] to close array index")
+		}
+
+		if nextToken.Type == ClosedSquarePar {
+			arrayLevel -= 1
+		} else if nextToken.Type == OpenSquarePar {
+			arrayLevel += 1
+		}
+
+		if arrayLevel == 0 {
+			exprIter := newArrayOfPointerIterator(expression)
+			return parseExpression(&exprIter)
+		} else {
+			expression = append(expression, nextToken)
+		}
 	}
 }
 
@@ -362,7 +428,7 @@ func parseFunctionCallArguments(tokenIter Iterator[Token]) ([]Node, error) {
 		argIter := newArrayOfPointerIterator(arg)
 		expr, err := parseExpression(&argIter)
 		if err != nil {
-			return nil, errors.New("Expected expression in argument list")
+			return nil, err
 		}
 		args = append(args, expr)
 	}
@@ -452,10 +518,11 @@ func parseBody(tokenIter Iterator[Token]) ([]Node, error) {
 	return nil, errors.New("Parser error")
 }
 
-// Collect a list of arguments
+// Collect a list of arguments between brackets
 func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error) {
 	parLevel := 0
-	blockLevel := 0
+	blockLevel := 0 // {}
+	arrayLevel := 0 // []
 
 	var tokenArgs = [][]*Token{}
 	idx := 0
@@ -479,10 +546,14 @@ func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error)
 			blockLevel += 1
 		} else if nextToken.Type == ClosedCurlPar {
 			blockLevel -= 1
-		} else if hasNext && nextToken.Type == Comma && parLevel == 0 && blockLevel == 0 {
+		} else if nextToken.Type == OpenSquarePar {
+			arrayLevel += 1
+		} else if nextToken.Type == ClosedSquarePar {
+			arrayLevel -= 1
+		} else if hasNext && nextToken.Type == Comma && parLevel == 0 && blockLevel == 0 && arrayLevel == 0 {
 			idx += 1
 		}
-		if nextToken.Type != Comma || parLevel != 0 || blockLevel != 0 {
+		if nextToken.Type != Comma || parLevel != 0 || blockLevel != 0 || arrayLevel != 0 {
 			if idx == len(tokenArgs) {
 				tokenArgs = append(tokenArgs, []*Token{})
 			}
