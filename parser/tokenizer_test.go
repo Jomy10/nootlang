@@ -99,6 +99,16 @@ func TestBoolToken(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func TestIfElseToken(t *testing.T) {
+	source := "if true { } elsif { } else {}"
+	expected := []Token{
+		{If, "if"}, {Bool, "true"}, {OpenCurlPar, "{"}, {ClosedCurlPar, "}"},
+		{Elsif, "elsif"}, {OpenCurlPar, "{"}, {ClosedCurlPar, "}"},
+		{Else, "else"}, {OpenCurlPar, "{"}, {ClosedCurlPar, "}"},
+	}
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 

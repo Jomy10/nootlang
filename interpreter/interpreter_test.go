@@ -45,88 +45,41 @@ func TestPrint(t *testing.T) {
 }
 
 func TestFunction(t *testing.T) {
-	nodes := nodes("def fn(arg) { noot!(arg); }; fn(56)", t)
-
-	bufStd := new(bytes.Buffer)
-	bufErr := new(bytes.Buffer)
-
-	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bufStd.String() != "56\n" {
-		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
-	}
-	if bufErr.Len() > 0 {
-		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
-	}
+	testWithOutput("def fn(arg) { noot!(arg); }; fn(56)", "56\n", t)
 }
 
 func TestMultiArgument(t *testing.T) {
-	nodes := nodes("def add(a, b) { return a + b }; noot!(add(1, 2))", t)
-
-	bufStd := new(bytes.Buffer)
-	bufErr := new(bytes.Buffer)
-
-	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bufStd.String() != "3\n" {
-		t.Fatal(fmt.Sprintf("got stdout %s", bufStd.String()))
-	}
-	if bufErr.Len() > 0 {
-		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
-	}
+	testWithOutput("def add(a, b) { return a + b }; noot!(add(1, 2))", "3\n", t)
 }
 
 func TestFloatMath(t *testing.T) {
-	// Because the first value is a float, the others will automatically be converted to floats
-	nodes := nodes("noot!(6.5 + 4 - 0.5)", t)
-
-	fmt.Printf("Nodes: %#v\n", nodes)
-
-	bufStd := new(bytes.Buffer)
-	bufErr := new(bytes.Buffer)
-
-	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bufStd.String() != "10\n" {
-		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
-	}
-	if bufErr.Len() > 0 {
-		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
-	}
+	// 4 will be converted to float because others are floats
+	testWithOutput("noot!(6.5 + 4 - 0.5)", "10\n", t)
 }
 
 func TestBoolExpression(t *testing.T) {
-	nodes := nodes("noot!(5 != 6)", t)
-
-	bufStd := new(bytes.Buffer)
-	bufErr := new(bytes.Buffer)
-
-	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bufStd.String() != "true\n" {
-		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
-	}
-	if bufErr.Len() > 0 {
-		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))
-	}
+	testWithOutput("noot!(5 != 6)", "true\n", t)
 }
 
 func TestBoolExpression2(t *testing.T) {
-	nodes := nodes("noot!(!true)", t)
+	testWithOutput("noot!(!true)", "false\n", t)
+}
+
+func TestIf(t *testing.T) {
+	testWithOutput("if true { noot!(\"works\")}", "works\n", t)
+}
+
+func TestElsif(t *testing.T) {
+	testWithOutput(`if 1 == 2 { noot!("wrong") } elsif true { noot!("correct") }`, "correct\n", t)
+}
+
+func TestElse(t *testing.T) {
+	testWithOutput(`if 2.0 != 2.0 { noot!("wrong 1") } elsif !true { noot!("wrong 2") } else { noot!("correct") }`, "correct\n", t)
+}
+
+// Test interpreter and check its stdout
+func testWithOutput(source string, expectedStdout string, t *testing.T) {
+	nodes := nodes(source, t)
 
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
@@ -137,8 +90,8 @@ func TestBoolExpression2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if bufStd.String() != "false\n" {
-		t.Fatal(fmt.Sprintf("Got stdout '%s'", bufStd.String()))
+	if bufStd.String() != expectedStdout {
+		t.Fatal(fmt.Sprintf("Got stdout '%s', but expected %v", bufStd.String(), expectedStdout))
 	}
 	if bufErr.Len() > 0 {
 		t.Fatal(fmt.Sprintf("got stderr %s", bufErr.String()))

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	tokens, err := parser.Tokenize(`noot!("Hello" + " world")`)
+	tokens, err := parser.Tokenize(`unitIsAlright := true; if !unitIsAlright { noot!("Unit sucks") } else { noot!("Unit is alright ") }`)
 	if err != nil {
 		panic(err)
 	}

@@ -209,6 +209,39 @@ func TestParseBool(t *testing.T) {
 // 	testParsing(source, expected, t)
 // }
 
+func TestIfParse(t *testing.T) {
+	source := "if true { a := 1; } elsif false { noot!(5); } else { b := 2; }"
+	expected := []Node{
+		IfNode{
+			BoolLiteralNode{true},
+			IfNode{
+				BoolLiteralNode{false},
+				ElseNode{
+					[]Node{
+						VarDeclNode{
+							"b",
+							IntegerLiteralNode{2},
+						},
+					},
+				},
+				[]Node{
+					FunctionCallExprNode{
+						"noot!",
+						[]Node{IntegerLiteralNode{5}},
+					},
+				},
+			},
+			[]Node{
+				VarDeclNode{
+					"a",
+					IntegerLiteralNode{1},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

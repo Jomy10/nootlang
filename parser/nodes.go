@@ -26,6 +26,18 @@ type BinaryExpressionNode struct {
 	Right    Node
 }
 
+//
+type IfNode struct {
+	Condition Node
+	// Can be nil if no more else block
+	NextElseBlock Node
+	Body          []Node
+}
+
+type ElseNode struct {
+	Body []Node
+}
+
 // (identifier)
 type VariableNode struct {
 	Name string

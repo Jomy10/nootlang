@@ -96,6 +96,9 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 		return ReturnNode{expr}, nil
 	case Def:
 		return parseFunctionDecl(tokenIter)
+	case If:
+		tokenIter.reverse(1)
+		return parseIf(tokenIter)
 	default:
 		return nil, errors.New(fmt.Sprintf("Node %#v is invalid at current position", firstToken))
 	}
@@ -189,6 +192,65 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		return BinaryNotNode{node}, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
+	}
+}
+
+// Parse if or else if
+func parseIf(tokenIter Iterator[Token]) (Node, error) {
+	ifToken, _ := tokenIter.next() // if
+	var condition []*Token
+	if ifToken.Type == If || ifToken.Type == Elsif {
+		nextToken, hasNext := tokenIter.peek()
+		for {
+			if !hasNext {
+				return nil, errors.New("If exepcted an opening curly bracket")
+			}
+			if nextToken.Type == OpenCurlPar {
+				break
+			}
+
+			condition = append(condition, nextToken)
+			// nextToken, hasNext = tokenIter.next()
+			tokenIter.consume(1)
+			nextToken, hasNext = tokenIter.peek()
+		}
+	}
+
+	var conditionExpr Node
+	if ifToken.Type == If || ifToken.Type == Elsif {
+		conditionIter := newArrayOfPointerIterator(condition)
+		var err error
+		conditionExpr, err = parseExpression(&conditionIter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	bodyExpr, err := parseBody(tokenIter)
+	if err != nil {
+		return nil, err
+	}
+
+	nextToken, hasNext := tokenIter.peek()
+	var elseBlock Node
+	if hasNext && (nextToken.Type == Else || nextToken.Type == Elsif) {
+		ifNode, err := parseIf(tokenIter)
+		if err != nil {
+			return nil, err
+		}
+		elseBlock = ifNode
+	} else {
+		elseBlock = nil
+	}
+
+	if ifToken.Type == Else {
+		return ElseNode{bodyExpr}, nil
+	} else {
+		return IfNode{
+			conditionExpr,
+			elseBlock,
+			bodyExpr,
+		}, nil
 	}
 }
 
@@ -302,6 +364,7 @@ func parseBody(tokenIter Iterator[Token]) ([]Node, error) {
 			curlLevel -= 1
 			if curlLevel == 0 {
 				subIter := tokenIter.subslice(i - 2) // don't include last curly brace
+				tokenIter.consume(i - 1)
 				return Parse(subIter.collect())
 			}
 		}

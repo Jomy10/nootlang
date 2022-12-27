@@ -42,6 +42,9 @@ const (
 	Def           // def
 	Return        // return
 	Nil           // nil
+	If            // if
+	Else          // else
+	Elsif         // Elsif
 )
 
 // A single token
@@ -89,6 +92,9 @@ func Tokenize(source string) ([]Token, error) {
 		{Def, regexp.MustCompile(`\A(def)`)},
 		{Return, regexp.MustCompile(`\A(return)`)},
 		{Nil, regexp.MustCompile(`\A(nil)`)},
+		{If, regexp.MustCompile(`\A(if)`)},
+		{Else, regexp.MustCompile(`\A(else)`)},
+		{Elsif, regexp.MustCompile(`\A(elsif)`)},
 		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
 	}
 

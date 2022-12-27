@@ -55,8 +55,50 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return ExecNode(runtime, node.(parser.ReturnNode).Expr)
 	case parser.BinaryNotNode:
 		return execBinaryNotExpressionNode(runtime, node.(parser.BinaryNotNode))
+	case parser.IfNode:
+		return nil, execIf(runtime, node.(parser.IfNode))
+	case parser.ElseNode:
+		return nil, execElse(runtime, node.(parser.ElseNode))
 	}
 	return nil, errors.New(fmt.Sprintf("Noot error: Invalid node `%#v`", node))
+}
+
+func execIf(runtime *runtime.Runtime, node parser.IfNode) error {
+	val, err := ExecNode(runtime, node.Condition)
+	if err != nil {
+		return err
+	}
+	switch val.(type) {
+	case bool:
+		if val.(bool) {
+			for _, bodynode := range node.Body {
+				_, err := ExecNode(runtime, bodynode)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		} else {
+			if node.NextElseBlock != nil {
+				_, err := ExecNode(runtime, node.NextElseBlock)
+				return err
+			} else {
+				return nil
+			}
+		}
+	default:
+		return errors.New(fmt.Sprintf("%v is not a boolean value", val))
+	}
+}
+
+func execElse(runtime *runtime.Runtime, node parser.ElseNode) error {
+	for _, node := range node.Body {
+		_, err := ExecNode(runtime, node)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func execBinaryNotExpressionNode(runtime *runtime.Runtime, node parser.BinaryNotNode) (interface{}, error) {

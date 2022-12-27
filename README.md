@@ -23,7 +23,7 @@ The interpreter is therefore focussed on readability rather than speed.
   - [x] integers
   - [x] **strings**
   - [x] **floats**
-  - [ ] **booleans**
+  - [x] **booleans**
   - [x] functions
   - [ ] anonymous functions
   ```noot
