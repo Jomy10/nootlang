@@ -12,13 +12,17 @@ type TT = int
 
 // Tokens
 const (
-	Ident   TT = iota
-	Declare    // :=
-	Equal      // =
-	Float      // \d.\d
-	Integer    // \d
-	String     // ".* \" "
-	Bool       // true false
+	Ident      TT = iota
+	Declare       // :=
+	Equal         // =
+	PlusEqual     // +=
+	MinEqual      // -=
+	StarEqual     // *=
+	SlashEqual    // /=
+	Float         // \d.\d
+	Integer       // \d
+	String        // ".* \" "
+	Bool          // true false
 
 	// Binary operators
 	And     // &&
@@ -52,6 +56,7 @@ const (
 	Else            // else
 	Elsif           // elsif
 	While           // while
+	Dot             // .
 )
 
 // A single token
@@ -73,6 +78,10 @@ func Tokenize(source string) ([]Token, error) {
 	re := []Pair{
 		{Declare, regexp.MustCompile(`\A(:=)`)},
 		{DEqual, regexp.MustCompile(`\A(==)`)},
+		{PlusEqual, regexp.MustCompile(`\A(\+=)`)},
+		{MinEqual, regexp.MustCompile(`\A(-=)`)},
+		{StarEqual, regexp.MustCompile(`\A(\*=)`)},
+		{SlashEqual, regexp.MustCompile(`\A(/=)`)},
 		{LTE, regexp.MustCompile(`\A(<=)`)},
 		{GTE, regexp.MustCompile(`\A(>=)`)},
 		{LT, regexp.MustCompile(`\A(<)`)},
@@ -98,6 +107,7 @@ func Tokenize(source string) ([]Token, error) {
 		{OpenSquarePar, regexp.MustCompile(`\A\[`)},
 		{ClosedSquarePar, regexp.MustCompile(`\A\]`)},
 		{Comma, regexp.MustCompile(`\A(,)`)},
+		{Dot, regexp.MustCompile(`\A(\.)`)},
 		{Def, regexp.MustCompile(`\A(def)`)},
 		{Return, regexp.MustCompile(`\A(return)`)},
 		{Nil, regexp.MustCompile(`\A(nil)`)},

@@ -48,7 +48,7 @@ func (runtime *Runtime) GetVar(varname string) (interface{}, error) {
 	return nil, errors.New(fmt.Sprintf("Variable %s is not declared", varname))
 }
 
-func (runtime *Runtime) SetVar(varname string, varval interface{}) {
+func (runtime *Runtime) SetVar(scopename string, varname string, varval interface{}) {
 	runtime.Vars[runtime.Scopes[len(runtime.Scopes)-1]][varname] = varval
 }
 
@@ -62,14 +62,23 @@ func (runtime *Runtime) SetArrayIndex(varname string, index int64, varval interf
 	}
 }
 
-func (runtime *Runtime) VarExists(varname string) bool {
+func (runtime *Runtime) ApplyToVariable(scopename string, varname string, operation func(interface{}) (interface{}, error)) error {
+	val, err := operation(runtime.Vars[scopename][varname])
+	if err != nil {
+		return err
+	}
+	runtime.Vars[scopename][varname] = val
+	return nil
+}
+
+func (runtime *Runtime) VarExists(varname string) (bool, string) {
 	for i := len(runtime.Scopes) - 1; i >= 0; i-- {
 		_, exists := runtime.Vars[runtime.Scopes[i]][varname]
 		if exists {
-			return true
+			return true, runtime.Scopes[i]
 		}
 	}
-	return false
+	return false, ""
 }
 
 func (runtime *Runtime) GetFunc(funcname string) func(*Runtime, []interface{}) (interface{}, error) {

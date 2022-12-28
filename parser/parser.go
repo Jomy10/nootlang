@@ -78,7 +78,7 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 			return parseFunctionCall(firstToken.Value, tokenIter)
 		case Declare:
 			fallthrough
-		case Equal:
+		case Equal, PlusEqual, MinEqual, StarEqual, SlashEqual:
 			_, _ = tokenIter.next() // consume :=/=
 			exprNode, err := parseExpression(tokenIter)
 			if err != nil {
@@ -88,7 +88,7 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 			if secondToken.Type == Declare {
 				return VarDeclNode{firstToken.Value, exprNode}, nil
 			} else {
-				return VarAssignNode{firstToken.Value, exprNode}, nil
+				return VarAssignNode{firstToken.Value, Operator(secondToken.Value), exprNode}, nil
 			}
 		case OpenSquarePar:
 			idxNode, err := parseArrayIndex(tokenIter)

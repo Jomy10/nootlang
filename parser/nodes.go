@@ -17,6 +17,14 @@ const (
 	Op_And                 = "&&"
 )
 
+const (
+	Op_Equal      Operator = "="
+	Op_PlusEqual           = "+="
+	Op_MinEqual            = "-="
+	Op_TimesEqual          = "*="
+	Op_DivEqual            = "/="
+)
+
 type Node interface{}
 
 // Left (operator) Right
@@ -52,6 +60,7 @@ type VarDeclNode struct {
 // VarName = Rhs
 type VarAssignNode struct {
 	VarName string
+	Op      Operator
 	Rhs     Node
 }
 

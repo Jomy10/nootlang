@@ -37,6 +37,7 @@ func TestAssignmentParse(t *testing.T) {
 		},
 		VarAssignNode{
 			"a",
+			Operator("="),
 			BinaryExpressionNode{
 				Left:     IntegerLiteralNode{6},
 				Operator: "-",

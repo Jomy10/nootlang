@@ -219,10 +219,10 @@ func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (inter
 		for i := 0; i < len(node.ArgumentNames); i++ {
 			if i < len(args) {
 				// runtime.Vars[node.ArgumentNames[i]] = args[i]
-				runtime.SetVar(node.ArgumentNames[i], args[i])
+				runtime.SetVar(runtime.CurrentScope(), node.ArgumentNames[i], args[i])
 			} else {
 				// runtime.Vars[node.ArgumentNames[i]] = nil
-				runtime.SetVar(node.ArgumentNames[i], nil)
+				runtime.SetVar(runtime.CurrentScope(), node.ArgumentNames[i], nil)
 			}
 		}
 
@@ -278,7 +278,8 @@ func execFuncCall(_runtime *runtime.Runtime, node parser.FunctionCallExprNode) (
 
 func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {
 	// if _, exists := runtime.Vars[node.VarName]; exists {
-	if runtime.VarExists(node.VarName) {
+	exists, _ := runtime.VarExists(node.VarName)
+	if exists {
 		return errors.New(fmt.Sprintf("Variable `%s` is already defined", node.VarName))
 	}
 
@@ -287,21 +288,57 @@ func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {
 		return err
 	}
 	// runtime.Vars[node.VarName] = rhs
-	runtime.SetVar(node.VarName, rhs)
+	runtime.SetVar(runtime.CurrentScope(), node.VarName, rhs)
 	return nil
 }
 
 func execVarAssign(runtime *runtime.Runtime, node parser.VarAssignNode) error {
 	// if _, exists := runtime.Vars[node.VarName]; !exists {
-	if !runtime.VarExists(node.VarName) {
+	exists, scope := runtime.VarExists(node.VarName)
+	if !exists {
 		return errors.New(fmt.Sprintf("Variable `%s` is not defined", node.VarName))
 	}
 	rhs, err := ExecNode(runtime, node.Rhs)
 	if err != nil {
 		return err
 	}
-	// runtime.Vars[node.VarName] = rhs
-	runtime.SetVar(node.VarName, rhs)
+
+	switch node.Op {
+	case parser.Op_Equal:
+		runtime.SetVar(scope, node.VarName, rhs)
+	case parser.Op_PlusEqual:
+		if err := runtime.ApplyToVariable(scope, node.VarName, func(varval interface{}) (interface{}, error) {
+			switch varval.(type) {
+			case []interface{}:
+				return append(varval.([]interface{}), rhs), nil
+			default:
+				return binaryExpressionResult(varval, rhs, parser.Operator("+"))
+			}
+		}); err != nil {
+			return nil
+		}
+	case parser.Op_MinEqual:
+		if err := runtime.ApplyToVariable(scope, node.VarName, func(varval interface{}) (interface{}, error) {
+			return binaryExpressionResult(varval, rhs, parser.Operator("-"))
+		}); err != nil {
+			return nil
+		}
+	case parser.Op_TimesEqual:
+		if err := runtime.ApplyToVariable(scope, node.VarName, func(varval interface{}) (interface{}, error) {
+			return binaryExpressionResult(varval, rhs, parser.Operator("*"))
+		}); err != nil {
+			return nil
+		}
+	case parser.Op_DivEqual:
+		if err := runtime.ApplyToVariable(scope, node.VarName, func(varval interface{}) (interface{}, error) {
+			return binaryExpressionResult(varval, rhs, parser.Operator("/"))
+		}); err != nil {
+			return nil
+		}
+	default:
+		return errors.New(fmt.Sprintf("Invalid operator %v (interpreter bug)", node.Op))
+	}
+
 	return nil
 }
 

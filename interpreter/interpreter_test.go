@@ -92,6 +92,22 @@ func TestArrayIndex(t *testing.T) {
 func TestArrayAssignment(t *testing.T) {
 	testWithOutput(`a := [5]; a[0] = 6; noot!(a[0])`, "6\n", t)
 }
+func TestArrayAppend(t *testing.T) {
+	testWithOutput(`a := [6]; a += 7; noot!(a)`, "[6 7]\n", t)
+}
+
+func TestPlusEqual(t *testing.T) {
+	testWithOutput(`a := 1; a += 2; noot!(a)`, "3\n", t)
+}
+func TestMinEqual(t *testing.T) {
+	testWithOutput(`a := 1; a -= 2; noot!(a)`, "-1\n", t)
+}
+func TestTimesEqual(t *testing.T) {
+	testWithOutput(`a := 3; a *= 2; noot!(a)`, "6\n", t)
+}
+func TestDivEqual(t *testing.T) {
+	testWithOutput(`a := 4; a /= 2; noot!(a)`, "2\n", t)
+}
 
 // Test interpreter and check its stdout
 func testWithOutput(source string, expectedStdout string, t *testing.T) {

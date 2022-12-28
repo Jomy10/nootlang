@@ -121,6 +121,18 @@ func TestSquareBracket(t *testing.T) {
 	testTokenizing(source, expected, t)
 }
 
+func TestAssignmentOperatorsTokens(t *testing.T) {
+	source := "+= -= *= /="
+	expected := []Token{{PlusEqual, "+="}, {MinEqual, "-="}, {StarEqual, "*="}, {SlashEqual, "/="}}
+	testTokenizing(source, expected, t)
+}
+
+func TestDotToken(t *testing.T) {
+	source := "."
+	expected := []Token{{Dot, "."}}
+	testTokenizing(source, expected, t)
+}
+
 func testTokenizing(source string, expected []Token, t *testing.T) {
 	tokens, err := Tokenize(source)
 
