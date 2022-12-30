@@ -35,6 +35,8 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 		return nil, execVarAssign(runtime, node.(parser.VarAssignNode))
 	case parser.FunctionCallExprNode:
 		return execFuncCall(runtime, node.(parser.FunctionCallExprNode))
+	case parser.MethodCallExprNode:
+		return nil, errors.New("method calls are not yet supported")
 	case parser.IntegerLiteralNode:
 		return node.(parser.IntegerLiteralNode).Value, nil
 	case parser.NilLiteralNode:

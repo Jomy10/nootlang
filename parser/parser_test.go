@@ -321,6 +321,22 @@ func TestArrayIndexAssignment(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestMethodCall(t *testing.T) {
+	source := "abc.xyz(5)"
+	expected := []Node{
+		MethodCallExprNode{
+			VariableNode{"abc"},
+			FunctionCallExprNode{
+				"xyz",
+				[]Node{
+					IntegerLiteralNode{5},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

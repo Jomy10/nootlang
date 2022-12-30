@@ -114,6 +114,9 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 			} else {
 				return nil, errors.New(fmt.Sprintf("Unexpected token %s", nextToken.Value))
 			}
+		case Dot:
+			tokenIter.consume(1) // consume dot
+			return parseMethodCall(VariableNode{firstToken.Value}, tokenIter)
 		default:
 			return nil, errors.New(fmt.Sprintf("%#v is invalid at current position", secondToken))
 		}
@@ -194,7 +197,7 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		switch secondToken.Type {
 		case OpenPar:
 			// function call
-			tokenIter.consume(1) // consume /ident
+			tokenIter.consume(1) // consume ident
 			return parseFunctionCall(firstToken.Value, tokenIter)
 		case OpenSquarePar:
 			tokenIter.consume(1) // consume ident
@@ -206,6 +209,9 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 				VariableNode{firstToken.Value},
 				innerIndexExpression,
 			}, nil
+		case Dot:
+			tokenIter.consume(2) // consume ident and dot
+			return parseMethodCall(VariableNode{firstToken.Value}, tokenIter)
 		default:
 			return parseBinaryExpression(tokenIter)
 		}
@@ -236,6 +242,22 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	default:
 		return nil, errors.New(fmt.Sprintf("Invalid start of expression `%v`", firstToken))
 	}
+}
+
+// tokenIter is at the method name (ident)
+func parseMethodCall(calledOn Node, tokenIter Iterator[Token]) (Node, error) {
+	funcNameToken, hasNext := tokenIter.next()
+	if !hasNext || funcNameToken.Type != Ident {
+		return nil, errors.New("Expected function name after `.`")
+	}
+	funcCallNode, err := parseFunctionCall(funcNameToken.Value, tokenIter)
+	if err != nil {
+		return nil, err
+	}
+	return MethodCallExprNode{
+		calledOn,
+		funcCallNode,
+	}, nil
 }
 
 // tokenIter is at [
@@ -307,7 +329,7 @@ func parseArrayLiteral(tokenIter Iterator[Token]) (Node, error) {
 	}, nil
 }
 
-// tokenIter starts at the condition of the while loop
+// MethodCallExprNodeenIter starts at the condition of the while loop
 func parseWhile(tokenIter Iterator[Token]) (Node, error) {
 	// Collect the while loop's condition
 	var condition []*Token
@@ -403,7 +425,8 @@ func parseIf(tokenIter Iterator[Token]) (Node, error) {
 	}
 }
 
-func parseFunctionCall(name string, tokenIter Iterator[Token]) (Node, error) {
+// tokenIter is at the opening bracket of the function call
+func parseFunctionCall(name string, tokenIter Iterator[Token]) (FunctionCallExprNode, error) {
 	args, err := parseFunctionCallArguments(tokenIter)
 	return FunctionCallExprNode{name, args}, err
 }

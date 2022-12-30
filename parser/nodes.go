@@ -105,6 +105,11 @@ type FunctionCallExprNode struct {
 	Arguments []Node
 }
 
+type MethodCallExprNode struct {
+	CalledOn     Node
+	FunctionCall FunctionCallExprNode
+}
+
 type FunctionDeclNode struct {
 	FuncName      string
 	ArgumentNames []string
