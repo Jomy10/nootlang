@@ -3,9 +3,9 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
+	"github.com/jomy10/nootlang/corelib"
 	"github.com/jomy10/nootlang/parser"
 	"github.com/jomy10/nootlang/runtime"
-	"github.com/jomy10/nootlang/stdlib"
 	"os"
 	"testing"
 )
@@ -27,7 +27,7 @@ func TestPrint(t *testing.T) {
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
 	runtime := runtime.NewRuntime(bufStd, bufErr, os.Stdin)
-	stdlib.Register(&runtime)
+	corelib.Register(&runtime)
 	n, err := ExecNode(&runtime, nodes[0])
 	if err != nil {
 		t.Fatal(err)

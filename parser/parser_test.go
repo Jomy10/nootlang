@@ -337,6 +337,22 @@ func TestMethodCall(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestMethodCallStringArgument(t *testing.T) {
+	source := "abc.xyz(\"!\")"
+	expected := []Node{
+		MethodCallExprNode{
+			VariableNode{"abc"},
+			FunctionCallExprNode{
+				"xyz",
+				[]Node{
+					StringLiteralNode{"!"},
+				},
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {

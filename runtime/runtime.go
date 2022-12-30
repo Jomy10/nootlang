@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 )
+
+type NativeFunction = func(*Runtime, []interface{}) (interface{}, error)
 
 // TODO: scopes
 type Runtime struct {
@@ -13,17 +16,19 @@ type Runtime struct {
 	// Scope names => Variable names => values
 	Vars           map[string]map[string]interface{}
 	Funcs          map[string]map[string]func(*Runtime, []interface{}) (interface{}, error)
+	Methods        map[reflect.Type]map[string]func(*Runtime, []interface{}) (interface{}, error)
 	Stdout, Stderr io.Writer
 	Stdin          io.Reader
 }
 
 func NewRuntime(stdout, stderr io.Writer, stdin io.Reader) Runtime {
 	runtime := Runtime{
-		Vars:   make(map[string]map[string]interface{}),
-		Funcs:  make(map[string]map[string]func(*Runtime, []interface{}) (interface{}, error)),
-		Stdout: stdout,
-		Stderr: stderr,
-		Stdin:  stdin,
+		Vars:    make(map[string]map[string]interface{}),
+		Funcs:   make(map[string]map[string]func(*Runtime, []interface{}) (interface{}, error)),
+		Methods: make(map[reflect.Type]map[string]NativeFunction),
+		Stdout:  stdout,
+		Stderr:  stderr,
+		Stdin:   stdin,
 	}
 	runtime.Vars["GLOBAL"] = make(map[string]interface{})
 	runtime.Funcs["GLOBAL"] = make(map[string]func(*Runtime, []interface{}) (interface{}, error))
@@ -81,7 +86,7 @@ func (runtime *Runtime) VarExists(varname string) (bool, string) {
 	return false, ""
 }
 
-func (runtime *Runtime) GetFunc(funcname string) func(*Runtime, []interface{}) (interface{}, error) {
+func (runtime *Runtime) GetFunc(funcname string) NativeFunction {
 	for i := len(runtime.Scopes) - 1; i >= 0; i-- {
 		scope := runtime.Scopes[i]
 		val, ok := runtime.Funcs[scope][funcname]
@@ -93,7 +98,7 @@ func (runtime *Runtime) GetFunc(funcname string) func(*Runtime, []interface{}) (
 	return nil
 }
 
-func (runtime *Runtime) SetFunc(funcname string, fn func(*Runtime, []interface{}) (interface{}, error)) {
+func (runtime *Runtime) SetFunc(funcname string, fn NativeFunction) {
 	runtime.Funcs[runtime.Scopes[len(runtime.Scopes)-1]][funcname] = fn
 }
 
@@ -105,10 +110,27 @@ func (runtime *Runtime) CurrentScope() string {
 func (runtime *Runtime) AddScope(scopename string) {
 	runtime.Scopes = append(runtime.Scopes, scopename)
 	runtime.Vars[scopename] = make(map[string]interface{})
-	runtime.Funcs[scopename] = make(map[string]func(*Runtime, []interface{}) (interface{}, error))
+	runtime.Funcs[scopename] = make(map[string]NativeFunction)
 }
 
 // Exit the current scope
 func (runtime *Runtime) ExitScope() {
 	runtime.Scopes = runtime.Scopes[:len(runtime.Scopes)-1]
+}
+
+func (runtime *Runtime) GetMethod(calledOnValue interface{}, methodname string) NativeFunction {
+	methodMap, hasType := runtime.Methods[reflect.TypeOf(calledOnValue)]
+	if !hasType {
+		return nil
+	}
+
+	return methodMap[methodname]
+}
+
+func (runtime *Runtime) SetMethod(onType reflect.Type, methodname string, method NativeFunction) {
+	methodMap, hasType := runtime.Methods[onType]
+	if !hasType {
+		runtime.Methods[onType] = make(map[string]NativeFunction)
+	}
+	methodMap[methodname] = method
 }

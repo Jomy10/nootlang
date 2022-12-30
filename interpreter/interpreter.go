@@ -3,17 +3,18 @@ package interpreter
 import (
 	"errors"
 	"fmt"
+	"github.com/jomy10/nootlang/corelib"
 	"github.com/jomy10/nootlang/parser"
 	runtime "github.com/jomy10/nootlang/runtime"
-	"github.com/jomy10/nootlang/stdlib"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 )
 
 func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
 	runtime := runtime.NewRuntime(stdout, stderr, stdin)
-	stdlib.Register(&runtime)
+	corelib.Register(&runtime)
 
 	for _, node := range nodes {
 		_, err := ExecNode(&runtime, node)
@@ -34,9 +35,9 @@ func ExecNode(runtime *runtime.Runtime, node parser.Node) (interface{}, error) {
 	case parser.VarAssignNode:
 		return nil, execVarAssign(runtime, node.(parser.VarAssignNode))
 	case parser.FunctionCallExprNode:
-		return execFuncCall(runtime, node.(parser.FunctionCallExprNode))
+		return execFuncCallNode(runtime, node.(parser.FunctionCallExprNode))
 	case parser.MethodCallExprNode:
-		return nil, errors.New("method calls are not yet supported")
+		return execMethodCallNode(runtime, node.(parser.MethodCallExprNode))
 	case parser.IntegerLiteralNode:
 		return node.(parser.IntegerLiteralNode).Value, nil
 	case parser.NilLiteralNode:
@@ -248,7 +249,7 @@ func newFunction(_runtime *runtime.Runtime, node parser.FunctionDeclNode) (inter
 	return nil, nil
 }
 
-func execFuncCall(_runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
+func execFuncCallNode(_runtime *runtime.Runtime, node parser.FunctionCallExprNode) (interface{}, error) {
 	// function := runtime.Funcs[node.FuncName]
 	function := _runtime.GetFunc(node.FuncName)
 
@@ -266,16 +267,39 @@ func execFuncCall(_runtime *runtime.Runtime, node parser.FunctionCallExprNode) (
 		}
 	}
 
+	return execFuncCall(_runtime, function, node.Arguments, nil)
+}
+
+// In the method call, the value on the left of the method call will be the first
+// element in the argument list passed to the native function
+func execMethodCallNode(runtime *runtime.Runtime, node parser.MethodCallExprNode) (interface{}, error) {
+	calledOnValue, err := ExecNode(runtime, node.CalledOn)
+	if err != nil {
+		return nil, err
+	}
+	method := runtime.GetMethod(calledOnValue, node.FunctionCall.FuncName)
+	if method == nil {
+		return nil, errors.New(fmt.Sprintf("Method %s does not exist on %v\n", node.FunctionCall.FuncName, reflect.TypeOf(calledOnValue)))
+	}
+	return execFuncCall(runtime, method, node.FunctionCall.Arguments, calledOnValue)
+}
+
+// - firstArg: Optional parameter for prepending an argument to the argument list
+//	 passed to the function (used in method call).
+func execFuncCall(runtime *runtime.Runtime, fn runtime.NativeFunction, callArgs []parser.Node, firstArg interface{}) (interface{}, error) {
 	args := []interface{}{}
-	for _, argNode := range node.Arguments {
-		val, err := ExecNode(_runtime, argNode)
+	if firstArg != nil {
+		args = append(args, firstArg)
+	}
+	for _, argNode := range callArgs {
+		val, err := ExecNode(runtime, argNode)
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, val)
 	}
 
-	return function(_runtime, args)
+	return fn(runtime, args)
 }
 
 func execVarDecl(runtime *runtime.Runtime, node parser.VarDeclNode) error {

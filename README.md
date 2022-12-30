@@ -41,7 +41,7 @@ The interpreter is therefore focussed on readability rather than speed.
   - [x] **scopes**
 - [ ] modules
 - **Statements**
-  - [ ] **if/elsif/else**
+  - [x] **if/elsif/else**
   - [ ] **match**
 
 ## Native Function Interface
