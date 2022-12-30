@@ -353,6 +353,41 @@ func TestMethodCallStringArgument(t *testing.T) {
 	testParsing(source, expected, t)
 }
 
+func TestMethodOnString(t *testing.T) {
+	source := `"hello".world()`
+	expected := []Node{
+		MethodCallExprNode{
+			StringLiteralNode{"hello"},
+			FunctionCallExprNode{
+				"world",
+				nil,
+			},
+		},
+	}
+	testParsing(source, expected, t)
+}
+
+func TestMethodOnInt(t *testing.T) {
+	// TODO: fix tokenization for this case
+	// fmt.Println("--------")
+	// source := `a := 6.concat(9)`
+	// expected := []Node{
+	// 	VarDeclNode{
+	// 		"a",
+	// 		MethodCallExprNode{
+	// 			IntegerLiteralNode{6},
+	// 			FunctionCallExprNode{
+	// 				"concat",
+	// 				[]Node{
+	// 					IntegerLiteralNode{9},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// testParsing(source, expected, t)
+}
+
 func testParsing(source string, expected []Node, t *testing.T) {
 	tokens, err := Tokenize(source)
 	if err != nil {
@@ -365,7 +400,7 @@ func testParsing(source string, expected []Node, t *testing.T) {
 	}
 
 	if len(nodes) != len(expected) {
-		t.Fatalf("Expected and nodes have different sizes\n%#v\n%#v\n", expected, nodes)
+		t.Fatalf("Expected and nodes have different sizes\nexpected: %#v\n   nodes: %#v\n", expected, nodes)
 	}
 
 	for i, node := range expected {

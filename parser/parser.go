@@ -76,10 +76,9 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 		switch secondToken.Type {
 		case OpenPar:
 			return parseFunctionCall(firstToken.Value, tokenIter)
-		case Declare:
-			fallthrough
-		case Equal, PlusEqual, MinEqual, StarEqual, SlashEqual:
-			_, _ = tokenIter.next() // consume :=/=
+		case Declare, Equal, PlusEqual, MinEqual, StarEqual, SlashEqual:
+			t, _ := tokenIter.next() // consume :=/=
+			fmt.Println("EQQUAL TOKE", t)
 			exprNode, err := parseExpression(tokenIter)
 			if err != nil {
 				return nil, err
@@ -120,6 +119,22 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 		default:
 			return nil, errors.New(fmt.Sprintf("%#v is invalid at current position", secondToken))
 		}
+	case String, Integer, Float, Bool:
+		// Literals follew by a dot are valid in statements
+		secondToken, hasSecond := tokenIter.next()
+		if !hasSecond {
+			return nil, errors.New("Literals cannot be used as statements")
+		}
+		if secondToken.Type == Dot {
+			firstTokenIter := newArrayOfPointerIterator([]*Token{firstToken})
+			lhsexpr, err := parseExpression(&firstTokenIter)
+			if err != nil {
+				return nil, err
+			}
+			return parseMethodCall(lhsexpr, tokenIter)
+		} else {
+			return nil, errors.New(fmt.Sprintf("Invalid token %v", secondToken))
+		}
 	case Return:
 		expr, err := parseExpression(tokenIter)
 		if err != nil {
@@ -140,6 +155,7 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 
 func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	firstToken, hasFirst := tokenIter.peek()
+	fmt.Println("first token in expression", firstToken)
 	if !hasFirst {
 		return nil, errors.New("expected expression")
 	}
@@ -148,7 +164,7 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	case OpenPar:
 		return parseBinaryExpression(tokenIter)
 	case Bool:
-		_, hasSecond := tokenIter.peekN(2)
+		secondToken, hasSecond := tokenIter.peekN(2)
 		// handle lonesome boolean literal
 		if !hasSecond {
 			tokenIter.consume(1) // consume boolean
@@ -158,23 +174,44 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 			}
 			return BoolLiteralNode{boolean}, nil
 		} else {
-			return parseBinaryExpression(tokenIter)
+			if secondToken.Type == Dot {
+				tokenIter.consume(2) // (bool).
+				boolean, err := strconv.ParseBool(firstToken.Value)
+				if err != nil {
+					return nil, err
+				}
+				return parseMethodCall(BoolLiteralNode{boolean}, tokenIter)
+			} else {
+				return parseBinaryExpression(tokenIter)
+			}
 		}
 	case Integer:
-		_, hasSecond := tokenIter.peekN(2)
+		secondToken, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome integer literal
 		if !hasSecond {
+			fmt.Println("no second")
 			tokenIter.consume(1) // consume integer
 			integer, err := strconv.ParseInt(firstToken.Value, 10, 64)
 			if err != nil {
 				return nil, err
 			}
+			fmt.Println("integer literal")
 			return IntegerLiteralNode{integer}, nil
 		} else {
-			return parseBinaryExpression(tokenIter)
+			fmt.Println("second", secondToken)
+			if secondToken.Type == Dot {
+				tokenIter.consume(2) // consume (int).
+				integer, err := strconv.ParseInt(firstToken.Value, 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				return parseMethodCall(IntegerLiteralNode{integer}, tokenIter)
+			} else {
+				return parseBinaryExpression(tokenIter)
+			}
 		}
 	case Float:
-		_, hasSecond := tokenIter.peekN(2)
+		secondToken, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome float literal
 		if !hasSecond {
 			tokenIter.consume(1) // consume float
@@ -184,7 +221,16 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 			}
 			return FloatLiteralNode{float}, nil
 		} else {
-			return parseBinaryExpression(tokenIter)
+			if secondToken.Type == Dot {
+				tokenIter.consume(2) // consume (int).
+				float, err := strconv.ParseFloat(firstToken.Value, 64)
+				if err != nil {
+					return nil, err
+				}
+				return parseMethodCall(FloatLiteralNode{float}, tokenIter)
+			} else {
+				return parseBinaryExpression(tokenIter)
+			}
 		}
 	case Ident:
 		secondToken, hasSecond := tokenIter.peekN(2)
@@ -228,7 +274,13 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		if secondToken.Type == Plus {
 			return parseBinaryExpression(tokenIter)
 		} else {
-			return nil, errors.New(fmt.Sprintf("Did not expect token %s afte string literal\n", secondToken.Value))
+			if secondToken.Type == Dot {
+				tokenIter.consume(2) // consume (str).
+				str := parseStringLiteral(firstToken.Value)
+				return parseMethodCall(str, tokenIter)
+			} else {
+				return nil, errors.New(fmt.Sprintf("Did not expect token %s afte string literal\n", secondToken.Value))
+			}
 		}
 	case Not:
 		tokenIter.consume(1)
