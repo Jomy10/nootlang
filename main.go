@@ -9,7 +9,12 @@ import (
 )
 
 func main() {
-	tokens, err := parser.Tokenize(`a := [5]; noot!(a); a += 6; noot!(a); a[1] = 1; noot!(a)`)
+	dat, err := os.ReadFile("/Users/jonaseveraert/Documents/projects/Advent-Of-Code-2022/day15/main.noot")
+	if err != nil {
+		panic(err)
+	}
+
+	tokens, err := parser.Tokenize(string(dat))
 	if err != nil {
 		panic(err)
 	}
@@ -17,7 +22,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// stdout := new(bytes.Buffer)
+
 	if err := interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin); err != nil {
 		panic(fmt.Sprintf("[Runtime error] %v\n", err))
 	}

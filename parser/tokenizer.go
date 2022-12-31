@@ -115,7 +115,7 @@ func Tokenize(source string) ([]Token, error) {
 		{Else, regexp.MustCompile(`\A(else)`)},
 		{Elsif, regexp.MustCompile(`\A(elsif)`)},
 		{While, regexp.MustCompile(`\A(while)`)},
-		{Ident, regexp.MustCompile(`\A(\w|!)+`)},
+		{Ident, regexp.MustCompile(`\A(\w|!|\?)+`)},
 	}
 
 	source = strings.TrimSpace(source)

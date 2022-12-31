@@ -77,8 +77,7 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 		case OpenPar:
 			return parseFunctionCall(firstToken.Value, tokenIter)
 		case Declare, Equal, PlusEqual, MinEqual, StarEqual, SlashEqual:
-			t, _ := tokenIter.next() // consume :=/=
-			fmt.Println("EQQUAL TOKE", t)
+			_, _ = tokenIter.next() // consume :=/=
 			exprNode, err := parseExpression(tokenIter)
 			if err != nil {
 				return nil, err
@@ -155,7 +154,6 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 
 func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 	firstToken, hasFirst := tokenIter.peek()
-	fmt.Println("first token in expression", firstToken)
 	if !hasFirst {
 		return nil, errors.New("expected expression")
 	}
@@ -189,16 +187,13 @@ func parseExpression(tokenIter Iterator[Token]) (Node, error) {
 		secondToken, hasSecond := tokenIter.peekN(2)
 		// Handle lonesome integer literal
 		if !hasSecond {
-			fmt.Println("no second")
 			tokenIter.consume(1) // consume integer
 			integer, err := strconv.ParseInt(firstToken.Value, 10, 64)
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("integer literal")
 			return IntegerLiteralNode{integer}, nil
 		} else {
-			fmt.Println("second", secondToken)
 			if secondToken.Type == Dot {
 				tokenIter.consume(2) // consume (int).
 				integer, err := strconv.ParseInt(firstToken.Value, 10, 64)
