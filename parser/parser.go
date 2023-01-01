@@ -45,7 +45,7 @@ func Parse(tokens []Token) ([]Node, error) {
 				if err.Error() != "Empty statement" {
 					return nil, err
 				}
-			} else {
+			} else if stmtNode != nil { // nil check to exclude comments
 				nodes = append(nodes, stmtNode)
 			}
 			start = i + 1
@@ -147,6 +147,8 @@ func parseStatement(tokenIter Iterator[Token]) (Node, error) {
 		return parseIf(tokenIter)
 	case While:
 		return parseWhile(tokenIter)
+	case Comment:
+		return nil, nil // Currently ignored
 	default:
 		return nil, errors.New(fmt.Sprintf("Node %#v is invalid at current position", firstToken))
 	}
@@ -337,38 +339,20 @@ func parseArrayIndex(tokenIter Iterator[Token]) (Node, error) {
 // tokenIter starts at [
 func parseArrayLiteral(tokenIter Iterator[Token]) (Node, error) {
 	tokenIter.consume(1) // consume [
-	squareBracketLevel := 1
 
-	var currentExpression []*Token
-	var expressions []Node
+	list, err := collectList(tokenIter, ClosedSquarePar)
+	if err != nil {
+		return nil, err
+	}
 
-	for {
-		nextToken, hasNext := tokenIter.next()
-		if !hasNext {
-			return nil, errors.New("Expected ] to close array initialization")
+	expressions := make([]Node, len(list))
+	for i, exprTokens := range list {
+		exprTokenIter := newArrayOfPointerIterator(exprTokens)
+		expr, err := parseExpression(&exprTokenIter)
+		if err != nil {
+			return nil, err
 		}
-
-		if nextToken.Type == OpenSquarePar {
-			squareBracketLevel += 1
-		} else if nextToken.Type == ClosedSquarePar {
-			squareBracketLevel -= 1
-		}
-
-		if nextToken.Type == Comma || squareBracketLevel == 0 {
-			exprIter := newArrayOfPointerIterator(currentExpression)
-			expr, err := parseExpression(&exprIter)
-			if err != nil {
-				return nil, err
-			}
-			expressions = append(expressions, expr)
-			currentExpression = currentExpression[:0]
-
-			if squareBracketLevel == 0 {
-				break
-			}
-		} else {
-			currentExpression = append(currentExpression, nextToken)
-		}
+		expressions[i] = expr
 	}
 
 	return ArrayLiteralNode{
@@ -406,6 +390,9 @@ func parseWhile(tokenIter Iterator[Token]) (Node, error) {
 	}
 
 	body, err := parseBody(tokenIter)
+	if err != nil {
+		return nil, err
+	}
 
 	return WhileNode{
 		expr,
@@ -606,7 +593,7 @@ func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error)
 			break
 		}
 
-		if nextToken.Type == closingToken && parLevel == 0 && blockLevel == 0 {
+		if nextToken.Type == closingToken && parLevel == 0 && blockLevel == 0 && arrayLevel == 0 {
 			return tokenArgs, nil
 		} else if nextToken.Type == OpenPar {
 			parLevel += 1
@@ -620,7 +607,7 @@ func collectList(tokenIter Iterator[Token], closingToken TT) ([][]*Token, error)
 			arrayLevel += 1
 		} else if nextToken.Type == ClosedSquarePar {
 			arrayLevel -= 1
-		} else if hasNext && nextToken.Type == Comma && parLevel == 0 && blockLevel == 0 && arrayLevel == 0 {
+		} else if nextToken.Type == Comma && parLevel == 0 && blockLevel == 0 && arrayLevel == 0 {
 			idx += 1
 		}
 		if nextToken.Type != Comma || parLevel != 0 || blockLevel != 0 || arrayLevel != 0 {

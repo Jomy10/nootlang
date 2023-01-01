@@ -10,7 +10,8 @@ import (
 
 type NativeFunction = func(*Runtime, []interface{}) (interface{}, error)
 
-// TODO: scopes
+// TODO: scopes for if and loops, etc.
+// TODO: allow a[1][1] ...
 type Runtime struct {
 	Scopes []string
 	// Scope names => Variable names => values
@@ -115,15 +116,28 @@ func (runtime *Runtime) AddScope(scopename string) {
 
 // Exit the current scope
 func (runtime *Runtime) ExitScope() {
+	// TODO:
+	// runtime.Vars[runtime.Scopes[len(runtime.Scopes)-1]] = nil
+	// runtime.Funcs[runtime.Scopes[len(runtime.Scopes)-1]] = nil
 	runtime.Scopes = runtime.Scopes[:len(runtime.Scopes)-1]
 }
 
 func (runtime *Runtime) GetMethod(calledOnValue interface{}, methodname string) NativeFunction {
+	// if reflect.TypeOf(calledOnValue).Kind() == reflect.Slice {
+	// 	methodMap, hasType := runtime.Methods[ay"]
+	// 	if !hasType {
+	// 		return nil
+	// 	}
+	// 	fn := methodMap[methodname]
+	// 	if fn != nil {
+	// 		return fn
+	// 	}
+	// }
+
 	methodMap, hasType := runtime.Methods[reflect.TypeOf(calledOnValue)]
 	if !hasType {
 		return nil
 	}
-
 	return methodMap[methodname]
 }
 

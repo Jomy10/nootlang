@@ -12,9 +12,13 @@ import (
 	"strings"
 )
 
-func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader) error {
+func Interpret(nodes []parser.Node, stdout, stderr io.Writer, stdin io.Reader, registerLibs []func(*runtime.Runtime)) error {
 	runtime := runtime.NewRuntime(stdout, stderr, stdin)
 	corelib.Register(&runtime)
+	// Load any other languages passed to the interpreter
+	for _, registerLib := range registerLibs {
+		registerLib(&runtime)
+	}
 
 	for _, node := range nodes {
 		_, err := ExecNode(&runtime, node)
@@ -130,6 +134,12 @@ func execArrayLiteral(runtime *runtime.Runtime, node parser.ArrayLiteralNode) (i
 }
 
 func execWhile(runtime *runtime.Runtime, node parser.WhileNode) error {
+	scopeStringBuilder := strings.Builder{}
+	scopeStringBuilder.WriteString(runtime.CurrentScope())
+	scopeStringBuilder.WriteString("$__$")
+	scopeStringBuilder.WriteString("while")
+	scope := scopeStringBuilder.String()
+
 whileLoop:
 	for {
 		condVal, err := ExecNode(runtime, node.Condition)
@@ -142,12 +152,15 @@ whileLoop:
 			if !(condVal.(bool)) {
 				break whileLoop
 			}
+
+			runtime.AddScope(scope)
 			for _, node := range node.Body {
 				_, err := ExecNode(runtime, node)
 				if err != nil {
 					return err
 				}
 			}
+			runtime.ExitScope()
 		default:
 			return errors.New("Condition is not a boolean expression in while loop")
 		}
@@ -395,7 +408,7 @@ func binaryExpressionResult(lhs interface{}, rhs interface{}, op parser.Operator
 			}
 			return binaryOp(lhs.(int64), rhsInt, op)
 		default:
-			return nil, errors.New(fmt.Sprintf("Cannot apply binary operator to %v\n", rhs))
+			return nil, errors.New(fmt.Sprintf("Cannot apply binary operator to %v\n", reflect.TypeOf(rhs)))
 		}
 	case float64:
 		switch rhs.(type) {

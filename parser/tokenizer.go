@@ -57,6 +57,8 @@ const (
 	Elsif           // elsif
 	While           // while
 	Dot             // .
+
+	Comment // //...
 )
 
 // A single token
@@ -76,6 +78,7 @@ func Tokenize(source string) ([]Token, error) {
 	// Token regex definitions
 	// The first in the list is the one that is matched first
 	re := []Pair{
+		{Comment, regexp.MustCompile(`\A(//.*)`)},
 		{Declare, regexp.MustCompile(`\A(:=)`)},
 		{DEqual, regexp.MustCompile(`\A(==)`)},
 		{PlusEqual, regexp.MustCompile(`\A(\+=)`)},

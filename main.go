@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/jomy10/nootlang/interpreter"
 	"github.com/jomy10/nootlang/parser"
+	"github.com/jomy10/nootlang/runtime"
+	"github.com/jomy10/nootlang/stdlib"
 	"os"
 )
 
@@ -23,8 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin); err != nil {
+	if err := interpreter.Interpret(nodes, os.Stdout, os.Stderr, os.Stdin, []func(*runtime.Runtime){stdlib.Register}); err != nil {
 		panic(fmt.Sprintf("[Runtime error] %v\n", err))
 	}
-	// fmt.Println(stdout.String())
 }

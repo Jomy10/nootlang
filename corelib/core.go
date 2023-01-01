@@ -12,14 +12,19 @@ import (
 // Register (import) the core library in a runtime
 func Register(r *runtime.Runtime) {
 	r.Funcs["GLOBAL"]["noot!"] = nootLine
-	r.Funcs["GLOBAL"]["gets?"] = gets_potentially
 
 	// String methods
-	string_type := reflect.TypeOf(reflect.String.String())
+	string_type := reflect.TypeOf("")
 	r.Methods[string_type] = make(map[string]runtime.NativeFunction)
 
 	r.Methods[string_type]["concat"] = string__concat
 	r.Methods[string_type]["split"] = string__split
+	r.Methods[string_type]["len"] = string__len
+
+	// Array methods
+	array_type := reflect.TypeOf([]interface{}{})
+	r.Methods[array_type] = make(map[string]runtime.NativeFunction)
+	r.Methods[array_type]["len"] = array__len
 }
 
 // `noot!`
@@ -33,8 +38,10 @@ func nootLine(runtime *runtime.Runtime, args []interface{}) (interface{}, error)
 		switch arg.(type) {
 		case string:
 			str += arg.(string)
+			str += " "
 		default:
 			str += fmt.Sprintf("%v", arg)
+			str += " "
 		}
 	}
 
@@ -60,6 +67,7 @@ func string__concat(runtime *runtime.Runtime, args []interface{}) (interface{}, 
 		rhs = fmt.Sprintf("%v", rhs)
 	}
 
+	// returns a string
 	return lhs + rhs, nil
 }
 
@@ -79,6 +87,7 @@ func string__split(runtime *runtime.Runtime, args []interface{}) (interface{}, e
 		rhs = fmt.Sprintf("%v", rhs)
 	}
 
+	// TODO: return as []interface{} !!
 	return strings.Split(lhs, rhs), nil
 }
 
@@ -92,5 +101,18 @@ func string__len(runtime *runtime.Runtime, args []interface{}) (interface{}, err
 		return nil, errors.New("interpreter error")
 	}
 
-	return len(lhs), nil
+	return int64(len(lhs)), nil
+}
+
+func array__len(runtime *runtime.Runtime, args []interface{}) (interface{}, error) {
+	if len(args) != 1 {
+		return nil, errors.New("`array.len` expects no arguments")
+	}
+
+	lhs, ok := args[0].([]interface{})
+	if !ok {
+		return nil, errors.New("intepreter error in `arrray.len`")
+	}
+
+	return int64(len(lhs)), nil
 }

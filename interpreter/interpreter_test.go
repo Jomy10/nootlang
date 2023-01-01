@@ -116,7 +116,7 @@ func testWithOutput(source string, expectedStdout string, t *testing.T) {
 	bufStd := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
 
-	err := Interpret(nodes, bufStd, bufErr, os.Stdin)
+	err := Interpret(nodes, bufStd, bufErr, os.Stdin, nil)
 
 	if err != nil {
 		t.Fatal(err)
